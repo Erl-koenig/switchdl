@@ -1,7 +1,7 @@
 package main
 
 import (
-	"switchdl/cmd"
+	"github.com/Erl-koenig/switchdl/cmd"
 )
 
 func main() {
