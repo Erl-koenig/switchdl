@@ -1,4 +1,1 @@
-.env
-switchdl
-# Added by goreleaser init:
 dist/
