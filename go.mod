@@ -1,4 +1,4 @@
-module switchdl
+module github.com/Erl-koenig/switchdl
 
 go 1.24.4
 
