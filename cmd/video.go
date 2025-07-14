@@ -79,8 +79,10 @@ var videoCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(videoCmd)
-	videoCmd.Flags().StringVarP(&videoCfg.OutputDir, "output-dir", "o", ".", "Output directory path")
-	videoCmd.Flags().StringVarP(&videoCfg.Filename, "filename", "f", "", "Output filename (defaults to video title)")
+	videoCmd.Flags().
+		StringVarP(&videoCfg.OutputDir, "output-dir", "o", ".", "Output directory path")
+	videoCmd.Flags().
+		StringVarP(&videoCfg.Filename, "filename", "f", "", "Output filename (defaults to video title)")
 	videoCmd.Flags().
 		StringVarP(&videoCfg.AccessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
 }
@@ -121,7 +123,11 @@ func downloadVideo(ctx context.Context, cfg *downloadConfig) error {
 	return downloadVideoFile(ctx, client, downloadURL, outputFile)
 }
 
-func fetchVideoDetails(ctx context.Context, client *http.Client, cfg *downloadConfig) (*VideoDetails, error) {
+func fetchVideoDetails(
+	ctx context.Context,
+	client *http.Client,
+	cfg *downloadConfig,
+) (*VideoDetails, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s", switchTubeBaseURL, cfg.VideoID)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -153,7 +159,11 @@ func fetchVideoDetails(ctx context.Context, client *http.Client, cfg *downloadCo
 	return &details, nil
 }
 
-func fetchVideoVariants(ctx context.Context, client *http.Client, cfg *downloadConfig) ([]VideoVariant, error) {
+func fetchVideoVariants(
+	ctx context.Context,
+	client *http.Client,
+	cfg *downloadConfig,
+) ([]VideoVariant, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s/video_variants", switchTubeBaseURL, cfg.VideoID)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -207,7 +217,11 @@ func sanitizeFilename(name string) string {
 	return sanitized
 }
 
-func downloadVideoFile(ctx context.Context, client *http.Client, downloadURL, output string) error {
+func downloadVideoFile(
+	ctx context.Context,
+	client *http.Client,
+	downloadURL, output string,
+) (err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -217,7 +231,13 @@ func downloadVideoFile(ctx context.Context, client *http.Client, downloadURL, ou
 	if err != nil {
 		return fmt.Errorf("failed to download video: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			if err == nil {
+				err = fmt.Errorf("failed to close response body: %w", cerr)
+			}
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code for download: %d", resp.StatusCode)
@@ -228,15 +248,17 @@ func downloadVideoFile(ctx context.Context, client *http.Client, downloadURL, ou
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
 	defer func() {
-		if cerr := out.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close output file: %w", cerr)
+		if cerr := out.Close(); cerr != nil {
+			if err == nil {
+				err = fmt.Errorf("failed to close output file: %w", cerr)
+			}
 		}
 	}()
 
 	return copyWithProgress(ctx, resp, out)
 }
 
-func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) error {
+func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (err error) {
 	const (
 		barStyleLBound     = "["
 		barStyleFiller     = "="
@@ -258,7 +280,12 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) er
 	}
 
 	p := mpb.NewWithContext(ctx, mpb.WithWidth(64))
-	barStyle := mpb.BarStyle().Lbound(barStyleLBound).Filler(barStyleFiller).Tip(barStyleTip).Padding(barStylePadding).Rbound(barStyleRBound)
+	barStyle := mpb.BarStyle().
+		Lbound(barStyleLBound).
+		Filler(barStyleFiller).
+		Tip(barStyleTip).
+		Padding(barStylePadding).
+		Rbound(barStyleRBound)
 
 	var bar *mpb.Bar
 	if totalSize > 0 {
@@ -287,12 +314,14 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) er
 
 	reader := bar.ProxyReader(resp.Body)
 	defer func() {
-		if cerr := reader.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close reader: %w", cerr)
+		if cerr := reader.Close(); cerr != nil {
+			if err == nil {
+				err = fmt.Errorf("failed to close reader: %w", cerr)
+			}
 		}
 	}()
 
-	_, err := io.Copy(out, reader)
+	_, err = io.Copy(out, reader)
 	if err != nil {
 		return fmt.Errorf("failed to write video to file: %w", err)
 	}
