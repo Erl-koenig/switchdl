@@ -75,8 +75,7 @@ var validateCmd = &cobra.Command{
 		if err != nil {
 			if err == keyring.ErrNotFound {
 				return fmt.Errorf(
-					"no access token found. Please run 'switchdl configure' to set one.",
-				)
+					"no access token found. Please run 'switchdl configure' to set one"
 			}
 			return fmt.Errorf("failed to retrieve token from keyring: %w", err)
 		}
@@ -90,10 +89,14 @@ var validateCmd = &cobra.Command{
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := client.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to send validation request: %w", err)
-		}
-		defer resp.Body.Close()
+			if err != nil {
+				return fmt.Errorf("failed to send validation request: %w", err)
+			}
+			defer func() {
+				if cerr := resp.Body.Close(); cerr != nil && err == nil {
+					err = fmt.Errorf("failed to close response body: %w", cerr)
+				}
+			}()
 
 		switch resp.StatusCode {
 		case http.StatusOK:

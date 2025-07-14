@@ -59,7 +59,7 @@ var videoCmd = &cobra.Command{
 			if err == nil {
 				videoCfg.AccessToken = token
 			} else {
-				return fmt.Errorf("access token not found. Run 'switchdl configure' or provide it with the --token flag.")
+				return fmt.Errorf("access token not found. Run 'switchdl configure' or provide it with the --token flag")
 			}
 		}
 
@@ -135,7 +135,11 @@ func fetchVideoDetails(ctx context.Context, client *http.Client, cfg *downloadCo
 	if err != nil {
 		return nil, fmt.Errorf("failed to get video details: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code for video details: %d", resp.StatusCode)
@@ -163,7 +167,11 @@ func fetchVideoVariants(ctx context.Context, client *http.Client, cfg *downloadC
 	if err != nil {
 		return nil, fmt.Errorf("failed to get video variants: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -219,7 +227,11 @@ func downloadVideoFile(ctx context.Context, client *http.Client, downloadURL, ou
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer out.Close()
+	defer func() {
+		if cerr := out.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close output file: %w", cerr)
+		}
+	}()
 
 	return copyWithProgress(ctx, resp, out)
 }
@@ -274,7 +286,11 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) er
 	}
 
 	reader := bar.ProxyReader(resp.Body)
-	defer reader.Close()
+	defer func() {
+		if cerr := reader.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close reader: %w", cerr)
+		}
+	}()
 
 	_, err := io.Copy(out, reader)
 	if err != nil {
