@@ -10,14 +10,14 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-type downloadConfig struct {
+type videoConfig struct {
 	outputDir   string
 	filename    string
 	accessToken string
 	videoID     string
 }
 
-var videoCfg downloadConfig
+var videoCfg videoConfig
 
 var videoCmd = &cobra.Command{
 	Use:   "video <video_id>",
@@ -58,10 +58,7 @@ var videoCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(videoCmd)
-	videoCmd.Flags().
-		StringVarP(&videoCfg.outputDir, "output-dir", "o", ".", "Output directory path")
-	videoCmd.Flags().
-		StringVarP(&videoCfg.filename, "filename", "f", "", "Output filename (defaults to video title)")
-	videoCmd.Flags().
-		StringVarP(&videoCfg.accessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
+	videoCmd.Flags().StringVarP(&videoCfg.outputDir, "output-dir", "o", ".", "Output directory path")
+	videoCmd.Flags().StringVarP(&videoCfg.filename, "filename", "f", "", "Output filename (defaults to video title)")
+	videoCmd.Flags().StringVarP(&videoCfg.accessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
 }
