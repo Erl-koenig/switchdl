@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Erl-koenig/switchdl/internal/keyringconfig"
+	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
 	"github.com/zalando/go-keyring"
 )
@@ -38,7 +40,7 @@ To delete the stored token:
 				return fmt.Errorf("access token cannot be empty")
 			}
 
-			err := keyring.Set(keyringService, keyringUser, token)
+			err := keyring.Set(keyringconfig.Service, keyringconfig.User, token)
 			if err != nil {
 				return fmt.Errorf("failed to save token to keyring: %w", err)
 			}
@@ -54,7 +56,7 @@ var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Check if an access token is currently stored",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, err := keyring.Get(keyringService, keyringUser)
+		_, err := keyring.Get(keyringconfig.Service, keyringconfig.User)
 		switch err {
 		case nil:
 			fmt.Println("An access token is currently stored.")
@@ -71,7 +73,7 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate the stored access token with the SwitchTube API",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		token, err := keyring.Get(keyringService, keyringUser)
+		token, err := keyring.Get(keyringconfig.Service, keyringconfig.User)
 		if err != nil {
 			if err == keyring.ErrNotFound {
 				return fmt.Errorf(
@@ -81,7 +83,7 @@ var validateCmd = &cobra.Command{
 		}
 
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", switchTubeBaseURL+"/api/v1/profiles/me", nil)
+		req, err := http.NewRequest("GET", media.SwitchTubeBaseURL+"/api/v1/profiles/me", nil)
 		if err != nil {
 			return fmt.Errorf("failed to create validation request: %w", err)
 		}
@@ -120,7 +122,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete the stored access token",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := keyring.Delete(keyringService, keyringUser)
+		err := keyring.Delete(keyringconfig.Service, keyringconfig.User)
 		switch err {
 		case nil:
 			fmt.Println("Access token successfully deleted.")

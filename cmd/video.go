@@ -11,14 +11,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Erl-koenig/switchdl/internal/keyringconfig"
+	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 	"github.com/zalando/go-keyring"
-)
-
-const (
-	switchTubeBaseURL = "https://tube.switch.ch"
 )
 
 type VideoVariant struct {
@@ -55,7 +53,7 @@ var videoCmd = &cobra.Command{
 		videoCfg.VideoID = args[0]
 
 		if videoCfg.AccessToken == "" {
-			token, err := keyring.Get(keyringService, keyringUser)
+			token, err := keyring.Get(keyringconfig.Service, keyringconfig.User)
 			if err == nil {
 				videoCfg.AccessToken = token
 			} else {
@@ -119,7 +117,7 @@ func downloadVideo(ctx context.Context, cfg *downloadConfig) error {
 	}
 
 	outputFile := filepath.Join(cfg.OutputDir, outputFilename)
-	downloadURL := switchTubeBaseURL + variant.Path
+	downloadURL := media.SwitchTubeBaseURL + variant.Path
 	return downloadVideoFile(ctx, client, downloadURL, outputFile)
 }
 
@@ -128,7 +126,7 @@ func fetchVideoDetails(
 	client *http.Client,
 	cfg *downloadConfig,
 ) (*VideoDetails, error) {
-	url := fmt.Sprintf("%s/api/v1/browse/videos/%s", switchTubeBaseURL, cfg.VideoID)
+	url := fmt.Sprintf("%s/api/v1/browse/videos/%s", media.SwitchTubeBaseURL, cfg.VideoID)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for video details: %w", err)
@@ -164,7 +162,7 @@ func fetchVideoVariants(
 	client *http.Client,
 	cfg *downloadConfig,
 ) ([]VideoVariant, error) {
-	url := fmt.Sprintf("%s/api/v1/browse/videos/%s/video_variants", switchTubeBaseURL, cfg.VideoID)
+	url := fmt.Sprintf("%s/api/v1/browse/videos/%s/video_variants", media.SwitchTubeBaseURL, cfg.VideoID)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

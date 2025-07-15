@@ -8,7 +8,7 @@ import (
 
 var channelCmd = &cobra.Command{
 	Use:   "channel",
-	Short: "A brief description of your command",
+	Short: "Download videos from a channel",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("channel called")
 	},
