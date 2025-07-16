@@ -42,8 +42,6 @@ var videoCmd = &cobra.Command{
 
 		client := media.NewClient(videoCfg.accessToken)
 
-		fmt.Println("Downloading video with ID:", videoCfg.videoID)
-
 		if err := os.MkdirAll(videoCfg.outputDir, 0755); err != nil {
 			return fmt.Errorf("error creating output directory: %w", err)
 		}

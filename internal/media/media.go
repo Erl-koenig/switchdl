@@ -38,13 +38,6 @@ type VideoDetails struct {
 	Title string `json:"title"`
 }
 
-type ChannelVideo struct {
-	ID        int    `json:"id"`
-	Title     string `json:"title"`
-	Duration  int    `json:"duration"`
-	CreatedAt string `json:"created_at"`
-}
-
 func NewClient(accessToken string) *Client {
 	return &Client{
 		BaseURL:     SwitchTubeBaseURL,
@@ -81,6 +74,7 @@ func (c *Client) DownloadVideo(ctx context.Context, videoID, outputDir, filename
 			outputFilename += ".mp4"
 		}
 	}
+	fmt.Printf("Downloading video \"%s\"\n", outputFilename)
 
 	outputFile := filepath.Join(outputDir, outputFilename)
 	downloadURL := c.BaseURL + variant.Path
