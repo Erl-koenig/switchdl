@@ -56,7 +56,7 @@ var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Check if an access token is currently stored",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, err := keyring.Get(keyringconfig.Service, keyringconfig.User)
+		_, err := keyringconfig.GetAccessToken("")
 		switch err {
 		case nil:
 			fmt.Println("An access token is currently stored.")
@@ -73,13 +73,9 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate the stored access token with the SwitchTube API",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		token, err := keyring.Get(keyringconfig.Service, keyringconfig.User)
+		token, err := keyringconfig.GetAccessToken("")
 		if err != nil {
-			if err == keyring.ErrNotFound {
-				return fmt.Errorf(
-					"no access token found. Please run 'switchdl configure' to set one")
-			}
-			return fmt.Errorf("failed to retrieve token from keyring: %w", err)
+			return err
 		}
 
 		client := &http.Client{}

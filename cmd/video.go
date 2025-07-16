@@ -7,7 +7,6 @@ import (
 	"github.com/Erl-koenig/switchdl/internal/keyringconfig"
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
-	"github.com/zalando/go-keyring"
 )
 
 var videoCfg media.DownloadVideoConfig
@@ -24,18 +23,15 @@ var videoCmd = &cobra.Command{
 		}
 		videoCfg.VideoID = args[0]
 
-		if videoCfg.AccessToken == "" {
-			token, err := keyring.Get(keyringconfig.Service, keyringconfig.User)
-			if err == nil {
-				videoCfg.AccessToken = token
-			} else {
-				return fmt.Errorf("access token not found. Run 'switchdl configure' or provide it with the --token flag")
-			}
+		token, err := keyringconfig.GetAccessToken(videoCfg.AccessToken)
+		if err != nil {
+			return err
 		}
+		videoCfg.AccessToken = token
 
 		client := media.NewClient(videoCfg.AccessToken)
 
-		if err := os.MkdirAll(videoCfg.OutputDir, 0755); err != nil {
+		if err := os.MkdirAll(videoCfg.OutputDir, 0o755); err != nil {
 			return fmt.Errorf("error creating output directory: %w", err)
 		}
 
