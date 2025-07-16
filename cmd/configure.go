@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 
@@ -35,16 +34,9 @@ To delete the stored token:
 			fmt.Print("Enter your SwitchTube access token: ")
 			token, _ := reader.ReadString('\n')
 			token = strings.TrimSpace(token)
-
-			if token == "" {
-				return fmt.Errorf("access token cannot be empty")
+			if err := keyringconfig.SetAccessToken(token); err != nil {
+				return err
 			}
-
-			err := keyring.Set(keyringconfig.Service, keyringconfig.User, token)
-			if err != nil {
-				return fmt.Errorf("failed to save token to keyring: %w", err)
-			}
-
 			fmt.Println("Access token successfully saved.")
 			return nil
 		}
@@ -78,38 +70,15 @@ var validateCmd = &cobra.Command{
 			return err
 		}
 
-		client := &http.Client{}
-		req, err := http.NewRequest("GET", media.SwitchTubeBaseURL+"/api/v1/profiles/me", nil)
-		if err != nil {
-			return fmt.Errorf("failed to create validation request: %w", err)
-		}
-		req.Header.Set("Authorization", fmt.Sprintf("Token %s", token))
-		req.Header.Set("Accept", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return fmt.Errorf("failed to send validation request: %w", err)
-		}
-		defer func() {
-			if cerr := resp.Body.Close(); cerr != nil && err == nil {
-				err = fmt.Errorf("failed to close response body: %w", cerr)
+		client := media.NewClient(token)
+		if err := client.ValidateToken(cmd.Context()); err != nil {
+			fmt.Println(err)
+			if strings.Contains(err.Error(), "invalid or expired") {
+				fmt.Println("Please run 'switchdl configure' to update it.")
 			}
-		}()
-
-		switch resp.StatusCode {
-		case http.StatusOK:
-			fmt.Println("Access token is valid.")
-		case http.StatusUnauthorized, http.StatusForbidden:
-			fmt.Printf(
-				"Access token is invalid or expired (HTTP %d). Please run 'switchdl configure' to update it.\n",
-				resp.StatusCode,
-			)
-		default:
-			return fmt.Errorf(
-				"unexpected API response for token validation: HTTP %d",
-				resp.StatusCode,
-			)
+			return nil
 		}
+		fmt.Println("Access token is valid.")
 		return nil
 	},
 }
@@ -118,15 +87,10 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete the stored access token",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := keyring.Delete(keyringconfig.Service, keyringconfig.User)
-		switch err {
-		case nil:
-			fmt.Println("Access token successfully deleted.")
-		case keyring.ErrNotFound:
-			fmt.Println("No access token was found to delete.")
-		default:
-			return fmt.Errorf("failed to delete token: %w", err)
+		if err := keyringconfig.DeleteAccessToken(); err != nil {
+			return err
 		}
+		fmt.Println("Access token successfully deleted or was not found.")
 		return nil
 	},
 }

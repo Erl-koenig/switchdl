@@ -29,3 +29,20 @@ func GetAccessToken(currentToken string) (string, error) {
 
 	return "", fmt.Errorf("access token not found in keyring for service '%s' and user '%s'. Run 'switchdl configure' or provide it with the --token flag or SWITCHDL_TOKEN environment variable", Service, User)
 }
+
+func SetAccessToken(token string) error {
+	if token == "" {
+		return fmt.Errorf("access token cannot be empty")
+	}
+	if err := keyring.Set(Service, User, token); err != nil {
+		return fmt.Errorf("failed to save token to keyring: %w", err)
+	}
+	return nil
+}
+
+func DeleteAccessToken() error {
+	if err := keyring.Delete(Service, User); err != nil && err != keyring.ErrNotFound {
+		return fmt.Errorf("failed to delete token: %w", err)
+	}
+	return nil
+}

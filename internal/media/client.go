@@ -22,6 +22,36 @@ func NewClient(accessToken string) *Client {
 	}
 }
 
+func (c *Client) ValidateToken(ctx context.Context) error {
+	url := fmt.Sprintf("%s/api/v1/profiles/me", c.BaseURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create validation request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send validation request: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return fmt.Errorf("access token is invalid or expired (HTTP %d)", resp.StatusCode)
+	default:
+		return fmt.Errorf("unexpected API response: HTTP %d", resp.StatusCode)
+	}
+}
+
 func (c *Client) fetchVideoDetails(ctx context.Context, videoID string) (*VideoDetails, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s", c.BaseURL, videoID)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
