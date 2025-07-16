@@ -1,3 +1,4 @@
+// Package keyringconfig manages access token storage and retrieval using the system keyring
 package keyringconfig
 
 import (

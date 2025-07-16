@@ -1,3 +1,4 @@
+// Package cmd provides the commands and flags managed by cobra for the CLI
 package cmd
 
 import (

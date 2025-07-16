@@ -1,3 +1,4 @@
+// Package media provides functionality for interacting with the SwitchTube API
 package media
 
 import (
