@@ -10,14 +10,7 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-type videoConfig struct {
-	outputDir   string
-	filename    string
-	accessToken string
-	videoID     string
-}
-
-var videoCfg videoConfig
+var videoCfg media.DownloadVideoConfig
 
 var videoCmd = &cobra.Command{
 	Use:   "video <video_id>",
@@ -29,24 +22,24 @@ var videoCmd = &cobra.Command{
 				 Use 'switchdl --help' for more information`,
 			)
 		}
-		videoCfg.videoID = args[0]
+		videoCfg.VideoID = args[0]
 
-		if videoCfg.accessToken == "" {
+		if videoCfg.AccessToken == "" {
 			token, err := keyring.Get(keyringconfig.Service, keyringconfig.User)
 			if err == nil {
-				videoCfg.accessToken = token
+				videoCfg.AccessToken = token
 			} else {
 				return fmt.Errorf("access token not found. Run 'switchdl configure' or provide it with the --token flag")
 			}
 		}
 
-		client := media.NewClient(videoCfg.accessToken)
+		client := media.NewClient(videoCfg.AccessToken)
 
-		if err := os.MkdirAll(videoCfg.outputDir, 0755); err != nil {
+		if err := os.MkdirAll(videoCfg.OutputDir, 0755); err != nil {
 			return fmt.Errorf("error creating output directory: %w", err)
 		}
 
-		if err := client.DownloadVideo(cmd.Context(), videoCfg.videoID, videoCfg.outputDir, videoCfg.filename); err != nil {
+		if err := client.DownloadVideo(cmd.Context(), &videoCfg); err != nil {
 			return fmt.Errorf("error downloading video: %w", err)
 		}
 
@@ -56,7 +49,8 @@ var videoCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(videoCmd)
-	videoCmd.Flags().StringVarP(&videoCfg.outputDir, "output-dir", "o", ".", "Output directory path")
-	videoCmd.Flags().StringVarP(&videoCfg.filename, "filename", "f", "", "Output filename (defaults to video title)")
-	videoCmd.Flags().StringVarP(&videoCfg.accessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
+	videoCmd.Flags().StringVarP(&videoCfg.OutputDir, "output-dir", "o", ".", "Output directory path")
+	videoCmd.Flags().StringVarP(&videoCfg.Filename, "filename", "f", "", "Output filename (defaults to video title)")
+	videoCmd.Flags().StringVarP(&videoCfg.AccessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
+	videoCmd.Flags().BoolVarP(&videoCfg.Overwrite, "overwrite", "w", false, "Overwrite existing files")
 }
