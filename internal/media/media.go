@@ -95,7 +95,11 @@ func (c *Client) fetchVideoDetails(ctx context.Context, videoID string) (*VideoD
 	if err != nil {
 		return nil, fmt.Errorf("failed to get video details: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code for video details: %d", resp.StatusCode)
@@ -123,7 +127,11 @@ func (c *Client) fetchVideoVariants(ctx context.Context, videoID string) ([]Vide
 	if err != nil {
 		return nil, fmt.Errorf("failed to get video variants: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -169,7 +177,11 @@ func (c *Client) downloadVideoFile(ctx context.Context, downloadURL, output stri
 	if err != nil {
 		return fmt.Errorf("failed to download video: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code for download: %d", resp.StatusCode)
@@ -179,7 +191,11 @@ func (c *Client) downloadVideoFile(ctx context.Context, downloadURL, output stri
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer out.Close()
+	defer func() {
+		if cerr := out.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close output file: %w", cerr)
+		}
+	}()
 
 	return copyWithProgress(ctx, resp, out)
 }
@@ -239,7 +255,11 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 	}
 
 	reader := bar.ProxyReader(resp.Body)
-	defer reader.Close()
+	defer func() {
+		if cerr := reader.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close reader: %w", cerr)
+		}
+	}()
 
 	_, err = io.Copy(out, reader)
 	if err != nil {
