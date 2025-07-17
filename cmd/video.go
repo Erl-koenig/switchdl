@@ -13,7 +13,10 @@ var videoCfg media.DownloadConfig
 
 var videoCmd = &cobra.Command{
 	Use:   "video <video_id>",
-	Short: "Download a video specified by its id",
+	Short: "Download one or multiple videos specified by their id",
+	Example: ` switchdl video 1234567890
+ switchdl video 1234567890 9876543210 3134859203 
+ switchdl video 1234567890 -o /path/to/dir --filename custom_name.mp4 -w -s`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf(

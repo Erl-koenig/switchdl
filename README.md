@@ -58,6 +58,11 @@ Use the `video` command with the video ID.The access token will be automatically
 Usage:
   switchdl video <video_id> [flags]
 
+Examples:
+ switchdl video 1234567890
+ switchdl video 1234567890 9876543210 3134859203
+ switchdl video 1234567890 -o /path/to/dir --filename custom_name.mp4 -w -s
+
 Flags:
   -f, --filename string     Output filename (defaults to video title)
   -h, --help                help for video
