@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var videoCfg media.DownloadVideoConfig
+var videoCfg media.DownloadConfig
 
 var videoCmd = &cobra.Command{
 	Use:   "video <video_id>",
@@ -21,7 +21,13 @@ var videoCmd = &cobra.Command{
 				 Use 'switchdl --help' for more information`,
 			)
 		}
-		videoCfg.VideoID = args[0]
+		if videoCfg.Filename != "" && len(args) > 1 {
+			return fmt.Errorf(
+				"custom filename (-f/--filename) can only be used when downloading a single video",
+			)
+		}
+
+		videoCfg.VideoIDs = args
 
 		token, err := keyringconfig.GetAccessToken(videoCfg.AccessToken)
 		if err != nil {
@@ -35,8 +41,10 @@ var videoCmd = &cobra.Command{
 			return fmt.Errorf("error creating output directory: %w", err)
 		}
 
-		if err := client.DownloadVideo(cmd.Context(), &videoCfg); err != nil {
-			return fmt.Errorf("error downloading video: %w", err)
+		summary := client.DownloadVideos(cmd.Context(), &videoCfg)
+
+		if summary.Succeeded == 0 {
+			return fmt.Errorf("failed to download any videos")
 		}
 
 		return nil

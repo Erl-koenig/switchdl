@@ -11,13 +11,25 @@ const (
 	SwitchTubeBaseURL = "https://tube.switch.ch"
 )
 
-type DownloadVideoConfig struct {
+type DownloadConfig struct {
 	AccessToken   string
-	Filename      string
 	OutputDir     string
 	Overwrite     bool
 	SelectVariant bool
-	VideoID       string
+	VideoIDs      []string
+	Filename      string
+}
+
+type DownloadSummary struct {
+	Total     int
+	Succeeded int
+	Failed    int
+	Results   []DownloadResult
+}
+
+type DownloadResult struct {
+	VideoID string
+	Error   error
 }
 
 type VideoVariant struct {
@@ -33,13 +45,16 @@ type VideoDetails struct {
 	Title string `json:"title"`
 }
 
-func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadVideoConfig) error {
-	videoDetails, err := c.fetchVideoDetails(ctx, cfg.VideoID)
+func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadConfig) error {
+	// TODO: consider using two structs for single and multiple video downloads
+	videoID := cfg.VideoIDs[0]
+
+	videoDetails, err := c.fetchVideoDetails(ctx, videoID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch video details: %w", err)
 	}
 
-	variants, err := c.fetchVideoVariants(ctx, cfg.VideoID)
+	variants, err := c.fetchVideoVariants(ctx, videoID)
 	if err != nil {
 		return err
 	}
@@ -55,7 +70,7 @@ func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadVideoConfig) er
 	}
 
 	if variant == nil {
-		return fmt.Errorf("no video/mp4 variant found for video ID: %s", cfg.VideoID)
+		return fmt.Errorf("no video/mp4 variant found for video ID: %s", videoID)
 	}
 
 	outputFilename := cfg.Filename
@@ -82,4 +97,52 @@ func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadVideoConfig) er
 
 	downloadURL := c.BaseURL + variant.Path
 	return c.downloadVideoFile(ctx, downloadURL, outputFile)
+}
+
+func (c *Client) DownloadVideos(ctx context.Context, cfg *DownloadConfig) *DownloadSummary {
+	summary := &DownloadSummary{
+		Total:   len(cfg.VideoIDs),
+		Results: make([]DownloadResult, 0, len(cfg.VideoIDs)),
+	}
+
+	var variant *VideoVariant
+	if cfg.SelectVariant && isInteractive() && len(cfg.VideoIDs) > 1 {
+		var err error
+		variant, err = c.promptForQualitySelection(ctx, cfg)
+		if err != nil {
+			fmt.Printf("Warning: failed to select quality: %v. Using best quality.\n", err)
+			cfg.SelectVariant = false
+		}
+	}
+	fmt.Printf("Starting download of %d video(s)\n", summary.Total)
+
+	for i, videoID := range cfg.VideoIDs {
+		fmt.Printf("\nProcessing video %d/%d (ID: %s)\n", i+1, summary.Total, videoID)
+
+		// TODO: better way to handle variant selection and new configs, make cfg.SelectVariant immutable
+		videoCfg := &DownloadConfig{
+			AccessToken:   cfg.AccessToken,
+			OutputDir:     cfg.OutputDir,
+			Overwrite:     cfg.Overwrite,
+			SelectVariant: cfg.SelectVariant && variant == nil,
+			VideoIDs:      []string{videoID},
+			Filename:      cfg.Filename,
+		}
+		err := c.DownloadVideo(ctx, videoCfg)
+		result := DownloadResult{VideoID: videoID, Error: err}
+
+		if err != nil {
+			summary.Failed++
+			fmt.Printf("Failed to download video %s: %v\n", videoID, err)
+		} else {
+			summary.Succeeded++
+		}
+		summary.Results = append(summary.Results, result)
+	}
+
+	if summary.Total > 1 {
+		printDownloadSummary(summary)
+	}
+
+	return summary
 }

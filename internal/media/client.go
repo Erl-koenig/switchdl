@@ -84,7 +84,10 @@ func (c *Client) fetchVideoDetails(ctx context.Context, videoID string) (*VideoD
 	return &details, nil
 }
 
-func (c *Client) fetchVideoVariants(ctx context.Context, videoID string) ([]VideoVariant, error) {
+func (c *Client) fetchVideoVariants(
+	ctx context.Context,
+	videoID string,
+) ([]VideoVariant, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s/video_variants", c.BaseURL, videoID)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {

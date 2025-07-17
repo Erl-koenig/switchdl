@@ -30,7 +30,7 @@ func promptUser(prompt string) (string, error) {
 	return strings.TrimSpace(input), nil
 }
 
-func handleExistingOutputFile(outputFile string, cfg *DownloadVideoConfig) (string, error) {
+func handleExistingOutputFile(outputFile string, cfg *DownloadConfig) (string, error) {
 	if cfg.Overwrite {
 		return outputFile, nil
 	}
@@ -146,7 +146,7 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 	}
 
 	p.Wait()
-	fmt.Println("Video downloaded successfully to", out.Name())
+	fmt.Printf("Video \"%s\" downloaded successfully \n", out.Name())
 	return nil
 }
 
@@ -169,5 +169,37 @@ func selectVariantInteractively(variants []VideoVariant) (*VideoVariant, error) 
 		}
 
 		return &variants[idx-1], nil
+	}
+}
+
+func (c *Client) promptForQualitySelection(
+	ctx context.Context,
+	cfg *DownloadConfig,
+) (*VideoVariant, error) {
+	fmt.Println("\nMultiple videos detected. How would you like to handle video quality selection?")
+
+	for {
+		choice, err := promptUser(
+			"Select quality [I]ndividually for each video / Use [B]est quality for all (i/b): ",
+		)
+		if err != nil {
+			fmt.Println("Failed to read selection. Defaulting to best quality.")
+			cfg.SelectVariant = false
+			return nil, err
+		}
+
+		switch strings.ToLower(choice) {
+		case "i", "individual", "individually":
+			// Handle selection for each video separately
+			return nil, nil
+
+		case "b", "best":
+			fmt.Println("Using best quality for all videos.")
+			cfg.SelectVariant = false
+			return nil, nil
+
+		default:
+			fmt.Println("Invalid choice. Please enter 'i' or 'b'.")
+		}
 	}
 }
