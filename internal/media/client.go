@@ -116,7 +116,10 @@ func (c *Client) fetchVideoVariants(ctx context.Context, videoID string) ([]Vide
 	return variants, nil
 }
 
-func (c *Client) downloadVideoFile(ctx context.Context, downloadURL, outputFile string) (err error) {
+func (c *Client) downloadVideoFile(
+	ctx context.Context,
+	downloadURL, outputFile string,
+) (err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)

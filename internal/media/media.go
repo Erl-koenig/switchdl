@@ -12,11 +12,12 @@ const (
 )
 
 type DownloadVideoConfig struct {
-	OutputDir   string
-	Filename    string
-	VideoID     string
-	Overwrite   bool
-	AccessToken string
+	AccessToken   string
+	Filename      string
+	OutputDir     string
+	Overwrite     bool
+	SelectVariant bool
+	VideoID       string
 }
 
 type VideoVariant struct {
@@ -43,7 +44,16 @@ func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadVideoConfig) er
 		return err
 	}
 
-	variant := selectBestVariant(variants)
+	var variant *VideoVariant
+	if cfg.SelectVariant && isInteractive() && len(variants) > 1 {
+		variant, err = selectVariantInteractively(variants)
+		if err != nil {
+			return err
+		}
+	} else {
+		variant = selectBestVariant(variants)
+	}
+
 	if variant == nil {
 		return fmt.Errorf("no video/mp4 variant found for video ID: %s", cfg.VideoID)
 	}

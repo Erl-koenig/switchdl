@@ -37,7 +37,12 @@ func handleExistingOutputFile(outputFile string, cfg *DownloadVideoConfig) (stri
 	if _, err := os.Stat(outputFile); err == nil {
 		if isInteractive() {
 			for {
-				choice, err := promptUser(fmt.Sprintf("Output file %s already exists.\n[O]verwrite / [R]ename / [S]kip? (o/r/s): ", outputFile))
+				choice, err := promptUser(
+					fmt.Sprintf(
+						"Output file %s already exists.\n[O]verwrite / [R]ename / [S]kip? (o/r/s): ",
+						outputFile,
+					),
+				)
 				if err != nil {
 					return "", fmt.Errorf("failed to read user input: %w", err)
 				}
@@ -143,4 +148,26 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 	p.Wait()
 	fmt.Println("Video downloaded successfully to", out.Name())
 	return nil
+}
+
+func selectVariantInteractively(variants []VideoVariant) (*VideoVariant, error) {
+	fmt.Println("\nAvailable video variants:")
+	for i, v := range variants {
+		fmt.Printf("[%d] %s (%s)\n", i+1, v.Name, v.MediaType)
+	}
+
+	for {
+		choice, err := promptUser(fmt.Sprintf("\nSelect variant (1-%d): ", len(variants)))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read user input: %w", err)
+		}
+
+		idx, err := strconv.Atoi(choice)
+		if err != nil || idx < 1 || idx > len(variants) {
+			fmt.Printf("Invalid choice. Please enter a number between 1 and %d.\n", len(variants))
+			continue
+		}
+
+		return &variants[idx-1], nil
+	}
 }

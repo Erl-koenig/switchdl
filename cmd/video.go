@@ -45,8 +45,14 @@ var videoCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(videoCmd)
-	videoCmd.Flags().StringVarP(&videoCfg.OutputDir, "output-dir", "o", ".", "Output directory path")
-	videoCmd.Flags().StringVarP(&videoCfg.Filename, "filename", "f", "", "Output filename (defaults to video title)")
-	videoCmd.Flags().StringVarP(&videoCfg.AccessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
-	videoCmd.Flags().BoolVarP(&videoCfg.Overwrite, "overwrite", "w", false, "Overwrite existing files")
+	videoCmd.Flags().
+		StringVarP(&videoCfg.OutputDir, "output-dir", "o", ".", "Output directory path")
+	videoCmd.Flags().
+		StringVarP(&videoCfg.Filename, "filename", "f", "", "Output filename (defaults to video title)")
+	videoCmd.Flags().
+		StringVarP(&videoCfg.AccessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
+	videoCmd.Flags().
+		BoolVarP(&videoCfg.Overwrite, "overwrite", "w", false, "Overwrite existing files")
+	videoCmd.Flags().
+		BoolVarP(&videoCfg.SelectVariant, "select-variant", "s", false, "List all video variants and prompt for selection")
 }

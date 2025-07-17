@@ -55,23 +55,16 @@ Use the `video` command with the video ID.The access token will be automatically
 **Command:**
 
 ```
-switchdl video <video_id> [flags]
-```
+Usage:
+  switchdl video <video_id> [flags]
 
-**Examples:**
-
-```bash
-# Basic usage (token retrieved from system's credential store)
-switchdl video <video_id>
-
-# Override configured token or provide if not configured
-switchdl video <video_id> --token <your_access_token>
-
-# Specify an output directory
-switchdl video <video_id> -o /path/to/downloads
-
-# Specify an output directory and filename (appends .mp4 if not provided in the filename)
-switchdl video <video_id> -o /path/to/downloads -f "Custom Filename.mp4"
+Flags:
+  -f, --filename string     Output filename (defaults to video title)
+  -h, --help                help for video
+  -o, --output-dir string   Output directory path (default ".")
+  -w, --overwrite           Overwrite existing files
+  -s, --select-variant      List all video variants and prompt for selection
+  -t, --token string        Access token for API authentication (overrides configured token)
 ```
 
 ### Shell Autocompletion

@@ -25,10 +25,17 @@ func GetAccessToken(currentToken string) (string, error) {
 
 	log.Printf("Keyring error: %v", err)
 	if err != keyring.ErrNotFound {
-		return "", fmt.Errorf("failed to access keyring: %w. Ensure the keyring service is running and you have appropriate permissions", err)
+		return "", fmt.Errorf(
+			"failed to access keyring: %w. Ensure the keyring service is running and you have appropriate permissions",
+			err,
+		)
 	}
 
-	return "", fmt.Errorf("access token not found in keyring for service '%s' and user '%s'. Run 'switchdl configure' or provide it with the --token flag or SWITCHDL_TOKEN environment variable", Service, User)
+	return "", fmt.Errorf(
+		"access token not found in keyring for service '%s' and user '%s'. Run 'switchdl configure' or provide it with the --token flag or SWITCHDL_TOKEN environment variable",
+		Service,
+		User,
+	)
 }
 
 func SetAccessToken(token string) error {

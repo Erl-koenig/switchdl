@@ -1,6 +1,8 @@
 package media
 
-import "strings"
+import (
+	"strings"
+)
 
 func ensureMp4Suffix(name string) string {
 	if !strings.HasSuffix(name, ".mp4") {
@@ -22,6 +24,7 @@ func sanitizeFilename(name string) string {
 	return sanitized
 }
 
+// TODO: make it more robust (maybe first video isnt always the best quality)
 func selectBestVariant(variants []VideoVariant) *VideoVariant {
 	for _, variant := range variants {
 		if variant.MediaType == "video/mp4" {
