@@ -90,6 +90,7 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 		downloadMessage    = "Downloading:"
 		doneMessage        = "done"
 		unknownSizeMessage = " (unknown size)"
+		progressBarWidth   = 64
 	)
 
 	contentLength := resp.Header.Get("Content-Length")
@@ -100,7 +101,7 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 		}
 	}
 
-	p := mpb.NewWithContext(ctx, mpb.WithWidth(64))
+	p := mpb.NewWithContext(ctx, mpb.WithWidth(progressBarWidth))
 	barStyle := mpb.BarStyle().
 		Lbound(barStyleLBound).
 		Filler(barStyleFiller).

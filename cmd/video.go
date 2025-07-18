@@ -9,6 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	defaultDirectoryPermissions = 0o755
+)
+
 var videoCfg media.DownloadConfig
 
 var videoCmd = &cobra.Command{
@@ -40,7 +44,7 @@ var videoCmd = &cobra.Command{
 
 		client := media.NewClient(videoCfg.AccessToken)
 
-		if err := os.MkdirAll(videoCfg.OutputDir, 0o755); err != nil {
+		if err := os.MkdirAll(videoCfg.OutputDir, defaultDirectoryPermissions); err != nil {
 			return fmt.Errorf("error creating output directory: %w", err)
 		}
 
@@ -67,3 +71,4 @@ func init() {
 	videoCmd.Flags().
 		BoolVarP(&videoCfg.SelectVariant, "select-variant", "s", false, "List all video variants and prompt for selection")
 }
+

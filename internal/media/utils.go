@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+const (
+	maxFilenameLength = 255
+)
+
 func ensureMp4Suffix(name string) string {
 	if !strings.HasSuffix(name, ".mp4") {
 		return name + ".mp4"
@@ -19,8 +23,8 @@ func sanitizeFilename(name string) string {
 		sanitized = strings.ReplaceAll(sanitized, char, "_")
 	}
 	sanitized = strings.TrimSpace(sanitized)
-	if len(sanitized) > 255 {
-		sanitized = sanitized[:255]
+	if len(sanitized) > maxFilenameLength {
+		sanitized = sanitized[:maxFilenameLength]
 	}
 	return sanitized
 }
@@ -50,3 +54,4 @@ func printDownloadSummary(summary *DownloadSummary) {
 		}
 	}
 }
+
