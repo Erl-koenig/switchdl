@@ -4,20 +4,24 @@ package media
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 
 const (
-	SwitchTubeBaseURL = "https://tube.switch.ch"
+	SwitchTubeBaseURL           = "https://tube.switch.ch"
+	DefaultDirectoryPermissions = 0o755
 )
 
 type DownloadConfig struct {
 	AccessToken   string
+	ChannelID     string
+	VideoIDs      []string
 	OutputDir     string
+	Filename      string
 	Overwrite     bool
 	SelectVariant bool
-	VideoIDs      []string
-	Filename      string
+	All           bool
 }
 
 type DownloadSummary struct {
@@ -32,6 +36,16 @@ type DownloadResult struct {
 	Error   error
 }
 
+type ChannelDetails struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+type ChannelVideo struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
 type VideoVariant struct {
 	Path string `json:"path"`
 	// NOTE: not used yet
@@ -41,8 +55,10 @@ type VideoVariant struct {
 }
 
 type VideoDetails struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
+	ID                     string `json:"id"`
+	Title                  string `json:"title"`
+	PublishedAt            string `json:"published_at"`             // Date and time at which the video was last published including time zone information formatted (returns string in this format: 2025-06-02T11:08:32.977+02:00)
+	DurationInMilliseconds int    `json:"duration_in_milliseconds"` // Duration of the video expressed in milliseconds. The value can be slightly different from the duration in the actual media files
 }
 
 func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadConfig) error {
@@ -145,4 +161,71 @@ func (c *Client) DownloadVideos(ctx context.Context, cfg *DownloadConfig) *Downl
 	}
 
 	return summary
+}
+
+func (c *Client) DownloadChannel(ctx context.Context, cfg *DownloadConfig) error {
+	channelDetails, err := c.fetchChannelDetails(ctx, cfg.ChannelID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch channel details: %w", err)
+	}
+
+	channelVideos, err := c.fetchChannelVideos(ctx, cfg.ChannelID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch channel videos: %w", err)
+	}
+
+	if len(channelVideos) == 0 {
+		fmt.Println("No videos found in this channel.")
+		return nil
+	}
+
+	fmt.Printf("Found %d videos in channel '%s'\n", len(channelVideos), channelDetails.Name)
+
+	videos := make([]*VideoDetails, len(channelVideos))
+	for i, v := range channelVideos {
+		details, err := c.fetchVideoDetails(ctx, v.ID)
+		if err != nil {
+			return fmt.Errorf("failed to fetch video details for %s: %w", v.ID, err)
+		}
+		videos[i] = details
+	}
+
+	var selectedVideos []*VideoDetails
+	if cfg.All {
+		selectedVideos = videos
+	} else {
+		selectedVideos, err = selectVideosInteractively(videos)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(selectedVideos) == 0 {
+		fmt.Println("No videos selected.")
+		return nil
+	}
+
+	// create subdirectory for channel videos
+	channelDir := filepath.Join(cfg.OutputDir, sanitizeFilename(channelDetails.Name))
+	if err := os.MkdirAll(channelDir, DefaultDirectoryPermissions); err != nil {
+		return fmt.Errorf("failed to create channel directory: %w", err)
+	}
+	fmt.Printf("Downloading %d video(s) to '%s'\n", len(selectedVideos), channelDir)
+
+	videoIDs := make([]string, len(selectedVideos))
+	for i, v := range selectedVideos {
+		videoIDs[i] = v.ID
+	}
+
+	videoCfg := &DownloadConfig{
+		AccessToken:   cfg.AccessToken,
+		OutputDir:     channelDir,
+		Overwrite:     cfg.Overwrite,
+		SelectVariant: cfg.SelectVariant, // false for channels
+		VideoIDs:      videoIDs,
+	}
+
+	c.DownloadVideos(ctx, videoCfg)
+
+	return nil
 }

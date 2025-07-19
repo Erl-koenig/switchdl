@@ -154,3 +154,70 @@ func (c *Client) downloadVideoFile(
 
 	return copyWithProgress(ctx, resp, out)
 }
+
+func (c *Client) fetchChannelDetails(
+	ctx context.Context,
+	channelID string,
+) (*ChannelDetails, error) {
+	url := fmt.Sprintf("%s/api/v1/browse/channels/%s", c.BaseURL, channelID)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for channel details: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get channel details: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code for channel details: %d", resp.StatusCode)
+	}
+
+	var details ChannelDetails
+	if err := json.NewDecoder(resp.Body).Decode(&details); err != nil {
+		return nil, fmt.Errorf("failed to parse channel details response: %w", err)
+	}
+
+	return &details, nil
+}
+
+func (c *Client) fetchChannelVideos(ctx context.Context, channelID string) ([]ChannelVideo, error) {
+	url := fmt.Sprintf("%s/api/v1/browse/channels/%s/videos", c.BaseURL, channelID)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request for channel videos: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch channel videos: %w", err)
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body: %w", cerr)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code for channel videos: %d", resp.StatusCode)
+	}
+
+	var videos []ChannelVideo
+	if err := json.NewDecoder(resp.Body).Decode(&videos); err != nil {
+		return nil, fmt.Errorf("failed to parse channel videos response: %w", err)
+	}
+
+	return videos, nil
+}

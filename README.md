@@ -50,13 +50,13 @@ Use "switchdl [command] --help" for more information about a command.
 
 ### Download a video
 
-Use the `video` command with the video ID.The access token will be automatically retrieved from your system's credential store if configured (can be overriden with the `--token` flag).
+Download individual or multiple videos with the `video` command.
 
 **Command:**
 
-```
+```bash
 Usage:
-  switchdl video <video_id> [flags]
+  switchdl video <id> [flags]
 
 Examples:
  switchdl video 1234567890
@@ -69,6 +69,22 @@ Flags:
   -o, --output-dir string   Output directory path (default ".")
   -w, --overwrite           Overwrite existing files
   -s, --select-variant      List all video variants and prompt for selection
+  -t, --token string        Access token for API authentication (overrides configured token)
+```
+
+### Download a channel
+
+Download videos from a channel interactively or all at once with the `channel` command.
+
+```bash
+Usage:
+  switchdl channel <id> [flags]
+
+Flags:
+  -a, --all                 Download all videos without prompting
+  -h, --help                help for channel
+  -o, --output-dir string   Output directory path (default ".")
+  -w, --overwrite           Force overwrite of existing files
   -t, --token string        Access token for API authentication (overrides configured token)
 ```
 

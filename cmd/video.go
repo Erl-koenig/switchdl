@@ -9,14 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultDirectoryPermissions = 0o755
-)
-
 var videoCfg media.DownloadConfig
 
 var videoCmd = &cobra.Command{
-	Use:   "video <video_id>",
+	Use:   "video <id>",
 	Short: "Download one or multiple videos specified by their id",
 	Example: ` switchdl video 1234567890
  switchdl video 1234567890 9876543210 3134859203 
@@ -44,7 +40,7 @@ var videoCmd = &cobra.Command{
 
 		client := media.NewClient(videoCfg.AccessToken)
 
-		if err := os.MkdirAll(videoCfg.OutputDir, defaultDirectoryPermissions); err != nil {
+		if err := os.MkdirAll(videoCfg.OutputDir, media.DefaultDirectoryPermissions); err != nil {
 			return fmt.Errorf("error creating output directory: %w", err)
 		}
 
@@ -69,6 +65,5 @@ func init() {
 	videoCmd.Flags().
 		BoolVarP(&videoCfg.Overwrite, "overwrite", "w", false, "Overwrite existing files")
 	videoCmd.Flags().
-		BoolVarP(&videoCfg.SelectVariant, "select-variant", "s", false, "List all video variants and prompt for selection")
+		BoolVarP(&videoCfg.SelectVariant, "select-variant", "s", false, "List all video variants (quality) and prompt for selection")
 }
-
