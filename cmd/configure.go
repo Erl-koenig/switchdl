@@ -30,18 +30,19 @@ To delete the stored token:
   switchdl configure delete`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 { // default to setting the token if no subcommand provided
-			reader := bufio.NewReader(os.Stdin)
-			fmt.Print("Enter your SwitchTube access token: ")
-			token, _ := reader.ReadString('\n')
-			token = strings.TrimSpace(token)
-			if err := keyringconfig.SetAccessToken(token); err != nil {
-				return err
-			}
-			fmt.Println("Access token successfully saved.")
-			return nil
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Enter your SwitchTube access token: ")
+		token, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read token: %w", err)
 		}
-		return cmd.Help()
+		token = strings.TrimSpace(token)
+		if err := keyringconfig.SetAccessToken(token); err != nil {
+			return err
+		}
+		fmt.Println("Access token successfully saved.")
+
+		return nil
 	},
 }
 
