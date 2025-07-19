@@ -28,6 +28,7 @@ To validate the stored token against the API:
 
 To delete the stored token:
   switchdl configure delete`,
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 { // default to setting the token if no subcommand provided
 			reader := bufio.NewReader(os.Stdin)
@@ -47,6 +48,7 @@ To delete the stored token:
 var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Check if an access token is currently stored",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := keyringconfig.GetAccessToken("")
 		switch err {
@@ -64,6 +66,7 @@ var showCmd = &cobra.Command{
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate the stored access token with the SwitchTube API",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		token, err := keyringconfig.GetAccessToken("")
 		if err != nil {
@@ -86,6 +89,7 @@ var validateCmd = &cobra.Command{
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete the stored access token",
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := keyringconfig.DeleteAccessToken(); err != nil {
 			return err
