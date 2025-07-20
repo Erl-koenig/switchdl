@@ -178,7 +178,7 @@ func selectVariantInteractively(variants []VideoVariant) (*VideoVariant, error) 
 func (c *Client) promptForQualitySelection(
 	ctx context.Context,
 	cfg *DownloadConfig,
-) (*VideoVariant, error) {
+) (bool, error) {
 	fmt.Println("\nMultiple videos detected. How would you like to handle video quality selection?")
 
 	for {
@@ -188,18 +188,17 @@ func (c *Client) promptForQualitySelection(
 		if err != nil {
 			fmt.Println("Failed to read selection. Defaulting to best quality.")
 			cfg.SelectVariant = false
-			return nil, err
+			return false, err
 		}
 
 		switch strings.ToLower(choice) {
 		case "i", "individual", "individually":
-			// Handle selection for each video separately
-			return nil, nil
+			return true, nil
 
 		case "b", "best":
 			fmt.Println("Using best quality for all videos.")
 			cfg.SelectVariant = false
-			return nil, nil
+			return false, nil
 
 		default:
 			fmt.Println("Invalid choice. Please enter 'i' or 'b'.")

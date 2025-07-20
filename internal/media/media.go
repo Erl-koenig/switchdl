@@ -61,8 +61,11 @@ type VideoDetails struct {
 	DurationInMilliseconds int    `json:"duration_in_milliseconds"` // Duration of the video expressed in milliseconds. The value can be slightly different from the duration in the actual media files
 }
 
-func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadConfig) error {
-	// TODO: consider using two structs for single and multiple video downloads
+func (c *Client) DownloadVideo(
+	ctx context.Context,
+	cfg *DownloadConfig,
+	variant *VideoVariant,
+) error {
 	videoID := cfg.VideoIDs[0]
 
 	videoDetails, err := c.fetchVideoDetails(ctx, videoID)
@@ -70,23 +73,24 @@ func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadConfig) error {
 		return fmt.Errorf("failed to fetch video details: %w", err)
 	}
 
-	variants, err := c.fetchVideoVariants(ctx, videoID)
-	if err != nil {
-		return err
-	}
-
-	var variant *VideoVariant
-	if cfg.SelectVariant && isInteractive() && len(variants) > 1 {
-		variant, err = selectVariantInteractively(variants)
+	if variant == nil {
+		variants, err := c.fetchVideoVariants(ctx, videoID)
 		if err != nil {
 			return err
 		}
-	} else {
-		variant = selectBestVariant(variants)
-	}
 
-	if variant == nil {
-		return fmt.Errorf("no video/mp4 variant found for video ID: %s", videoID)
+		if cfg.SelectVariant && isInteractive() && len(variants) > 1 {
+			variant, err = selectVariantInteractively(variants)
+			if err != nil {
+				return err
+			}
+		} else {
+			variant = selectBestVariant(variants)
+		}
+
+		if variant == nil {
+			return fmt.Errorf("no video/mp4 variant found for video ID: %s", videoID)
+		}
 	}
 
 	outputFilename := cfg.Filename
@@ -107,7 +111,7 @@ func (c *Client) DownloadVideo(ctx context.Context, cfg *DownloadConfig) error {
 	if err != nil {
 		return err
 	}
-	if outputFile == "" { // If skip was chosen in interactive mode
+	if outputFile == "" { // If skip was chosen in interactive mode (existing file)
 		return nil
 	}
 
@@ -121,30 +125,47 @@ func (c *Client) DownloadVideos(ctx context.Context, cfg *DownloadConfig) *Downl
 		Results: make([]DownloadResult, 0, len(cfg.VideoIDs)),
 	}
 
-	var variant *VideoVariant
-	if cfg.SelectVariant && isInteractive() && len(cfg.VideoIDs) > 1 {
-		var err error
-		variant, err = c.promptForQualitySelection(ctx, cfg)
+	// store pre-selected variants (1. fetch all variants, 2. select variants, 3. download each)
+	videoVariants := make(map[string]*VideoVariant)
+	if cfg.SelectVariant && isInteractive() {
+		individualSelection, err := c.promptForQualitySelection(ctx, cfg)
 		if err != nil {
 			fmt.Printf("Warning: failed to select quality: %v. Using best quality.\n", err)
 			cfg.SelectVariant = false
+		} else if individualSelection { // select variants individually
+			for i, videoID := range cfg.VideoIDs {
+				fmt.Printf("\nProcessing video %d/%d (ID: %s)\n", i+1, summary.Total, videoID)
+				variants, err := c.fetchVideoVariants(ctx, videoID)
+				if err != nil {
+					fmt.Printf("Failed to fetch variants for video %s: %v\n", videoID, err)
+					continue
+				}
+				variant, err := selectVariantInteractively(variants)
+				if err != nil {
+					fmt.Printf("Failed to select variant for video %s: %v\n", videoID, err)
+					continue
+				}
+				videoVariants[videoID] = variant
+			}
 		}
 	}
+
 	fmt.Printf("Starting download of %d video(s)\n", summary.Total)
 
 	for i, videoID := range cfg.VideoIDs {
 		fmt.Printf("\nProcessing video %d/%d (ID: %s)\n", i+1, summary.Total, videoID)
 
-		// TODO: better way to handle variant selection and new configs, make cfg.SelectVariant immutable
 		videoCfg := &DownloadConfig{
 			AccessToken:   cfg.AccessToken,
 			OutputDir:     cfg.OutputDir,
 			Overwrite:     cfg.Overwrite,
-			SelectVariant: cfg.SelectVariant && variant == nil,
+			SelectVariant: cfg.SelectVariant,
 			VideoIDs:      []string{videoID},
 			Filename:      cfg.Filename,
 		}
-		err := c.DownloadVideo(ctx, videoCfg)
+
+		variant := videoVariants[videoID] // will be nil if flag not provided
+		err := c.DownloadVideo(ctx, videoCfg, variant)
 		result := DownloadResult{VideoID: videoID, Error: err}
 
 		if err != nil {

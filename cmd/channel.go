@@ -10,22 +10,27 @@ var channelCfg media.DownloadConfig
 
 var channelCmd = &cobra.Command{
 	Use:   "channel <id>",
-	Short: "Download videos from a channel",
+	Short: "Download videos from one or multiple channels",
 	Long: `Download videos from a SwitchTube channel.
 You can either download all videos at once or select which ones specifically.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		channelCfg.ChannelID = args[0]
+		for _, channelID := range args {
+			channelCfg.ChannelID = channelID
 
-		token, err := keyringconfig.GetAccessToken(channelCfg.AccessToken)
-		if err != nil {
-			return err
+			token, err := keyringconfig.GetAccessToken(channelCfg.AccessToken)
+			if err != nil {
+				return err
+			}
+			channelCfg.AccessToken = token
+
+			client := media.NewClient(channelCfg.AccessToken)
+
+			if err := client.DownloadChannel(cmd.Context(), &channelCfg); err != nil {
+				return err
+			}
 		}
-		channelCfg.AccessToken = token
-
-		client := media.NewClient(channelCfg.AccessToken)
-
-		return client.DownloadChannel(cmd.Context(), &channelCfg)
+		return nil
 	},
 }
 
@@ -39,4 +44,6 @@ func init() {
 		BoolVarP(&channelCfg.Overwrite, "overwrite", "w", false, "Force overwrite of existing files")
 	channelCmd.Flags().
 		BoolVarP(&channelCfg.All, "all", "a", false, "Download all videos without prompting")
+	channelCmd.Flags().
+		BoolVarP(&channelCfg.SelectVariant, "select-variant", "s", false, "List all video variants (quality) and prompt for selection")
 }
