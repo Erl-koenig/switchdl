@@ -44,7 +44,12 @@ Available Commands:
   video       Download one or more videos specified by their id
 
 Flags:
-  -h, --help   help for switchdl
+  -h, --help                help for switchdl
+  -o, --output-dir string   Output directory path (default ".")
+  -w, --overwrite           Force overwrite of existing files
+  -v, --select-variant      List all video variants (quality) and prompt for selection
+  -s, --skip                Skip existing files
+  -t, --token string        Access token for API authentication (overrides configured token)
 
 Use "switchdl [command] --help" for more information about a command.
 ```
@@ -63,10 +68,12 @@ Examples:
  switchdl video 1234567890 -o /path/to/dir --filename custom_name.mp4 -w -v
 
 Flags:
-  -f, --filename string     Output filename (defaults to video title)
-  -h, --help                help for video
+  -f, --filename string   Output filename (defaults to video title)
+  -h, --help              help for video
+
+Global Flags:
   -o, --output-dir string   Output directory path (default ".")
-  -w, --overwrite           Overwrite existing files
+  -w, --overwrite           Force overwrite of existing files
   -v, --select-variant      List all video variants (quality) and prompt for selection
   -s, --skip                Skip existing files
   -t, --token string        Access token for API authentication (overrides configured token)
@@ -82,8 +89,10 @@ Usage:
   switchdl channel <id> [flags]
 
 Flags:
-  -a, --all                 Download all videos without prompting
-  -h, --help                help for channel
+  -a, --all    Download all videos without prompting
+  -h, --help   help for channel
+
+Global Flags:
   -o, --output-dir string   Output directory path (default ".")
   -w, --overwrite           Force overwrite of existing files
   -v, --select-variant      List all video variants (quality) and prompt for selection
