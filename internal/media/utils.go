@@ -54,4 +54,3 @@ func printDownloadSummary(summary *DownloadSummary) {
 		}
 	}
 }
-
