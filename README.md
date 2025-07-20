@@ -8,6 +8,14 @@
 
 Download a pre-compiled binary for your operating system from the [GitHub Releases](https://github.com/Erl-koenig/switchdl/releases) page.
 
+### Using Homebrew (macOS)
+
+If you have Homebrew installed, install using the following tap:
+
+```bash
+brew install erlkoenig/homebrew-switchdl/switchdl
+```
+
 ### From source
 
 Ensure you have a working Go environment (Go 1.24.4+ is required). Note: The `version` command will show `dev` as it is built from source.
