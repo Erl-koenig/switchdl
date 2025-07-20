@@ -13,6 +13,8 @@ var channelCmd = &cobra.Command{
 	Short: "Download videos from one or multiple channels",
 	Long: `Download videos from one or more SwitchTube channels by providing their unique channel IDs.
 You can either download all videos at once or select which ones specifically.`,
+	Example: ` switchdl channel abcdef1234
+ switchdl channel abcdef1234 ghijk56789 -a`,
 	Args: cobra.MinimumNArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		if downloadCfg.Overwrite && downloadCfg.Skip {

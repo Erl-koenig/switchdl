@@ -63,9 +63,9 @@ Usage:
   switchdl video <id> [flags]
 
 Examples:
- switchdl video 1234567890
- switchdl video 1234567890 9876543210 3134859203
- switchdl video 1234567890 -o /path/to/dir --filename custom_name.mp4 -w -v
+  switchdl video 1234567890
+  switchdl video 1234567890 9876543210 3134859203
+  switchdl video 1234567890 -o /path/to/dir -f custom_name.mp4 -w -v
 
 Flags:
   -f, --filename string   Output filename (defaults to video title)
@@ -87,6 +87,10 @@ You can either download all videos at once or select which ones specifically.
 
 Usage:
   switchdl channel <id> [flags]
+
+Examples:
+ switchdl channel abcdef1234
+ switchdl channel abcdef1234 ghijk56789 -a
 
 Flags:
   -a, --all    Download all videos without prompting
