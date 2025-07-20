@@ -11,7 +11,7 @@ var channelCfg media.DownloadConfig
 var channelCmd = &cobra.Command{
 	Use:   "channel <id>",
 	Short: "Download videos from one or multiple channels",
-	Long: `Download videos from a SwitchTube channel.
+	Long: `Download videos from one or more SwitchTube channels by providing their unique channel IDs.
 You can either download all videos at once or select which ones specifically.`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

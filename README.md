@@ -50,11 +50,9 @@ Use "switchdl [command] --help" for more information about a command.
 
 ### Download a video
 
-Download individual or multiple videos with the `video` command.
-
-**Command:**
-
 ```bash
+Download one or more videos specified by their id
+
 Usage:
   switchdl video <id> [flags]
 
@@ -68,15 +66,16 @@ Flags:
   -h, --help                help for video
   -o, --output-dir string   Output directory path (default ".")
   -w, --overwrite           Overwrite existing files
-  -s, --select-variant      List all video variants and prompt for selection
+  -s, --select-variant      List all video variants (quality) and prompt for selection
   -t, --token string        Access token for API authentication (overrides configured token)
 ```
 
 ### Download a channel
 
-Download videos from a channel interactively or all at once with the `channel` command.
-
 ```bash
+Download videos from one or more SwitchTube channels by providing their unique channel IDs.
+You can either download all videos at once or select which ones specifically.
+
 Usage:
   switchdl channel <id> [flags]
 
@@ -85,6 +84,7 @@ Flags:
   -h, --help                help for channel
   -o, --output-dir string   Output directory path (default ".")
   -w, --overwrite           Force overwrite of existing files
+  -s, --select-variant      List all video variants (quality) and prompt for selection
   -t, --token string        Access token for API authentication (overrides configured token)
 ```
 
