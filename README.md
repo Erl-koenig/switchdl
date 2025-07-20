@@ -13,7 +13,7 @@ Download a pre-compiled binary for your operating system from the [GitHub Releas
 If you have Homebrew installed, install using the following tap:
 
 ```bash
-brew install erlkoenig/homebrew-switchdl/switchdl
+brew install erl-koenig/homebrew-switchdl/switchdl
 ```
 
 ### From source
