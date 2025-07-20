@@ -42,3 +42,15 @@ release:
     ---
 
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
+
+homebrew_casks:
+  - name: switchdl
+    homepage: https://github.com/Erl-koenig/switchdl
+    description: "A CLI tool for downloading videos from SwitchTube"
+    license: MIT
+    directory: Casks
+    repository:
+      owner: Erl-koenig
+      branch: main
+      name: homebrew-switchdl
+      token: "{{ .Env.HOMEBREW_TOKEN }}"
