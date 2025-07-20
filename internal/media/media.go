@@ -20,6 +20,7 @@ type DownloadConfig struct {
 	OutputDir     string
 	Filename      string
 	Overwrite     bool
+	Skip          bool
 	SelectVariant bool
 	All           bool
 }
@@ -159,6 +160,7 @@ func (c *Client) DownloadVideos(ctx context.Context, cfg *DownloadConfig) *Downl
 			AccessToken:   cfg.AccessToken,
 			OutputDir:     cfg.OutputDir,
 			Overwrite:     cfg.Overwrite,
+			Skip:          cfg.Skip,
 			SelectVariant: cfg.SelectVariant,
 			VideoIDs:      []string{videoID},
 			Filename:      cfg.Filename,
@@ -242,7 +244,8 @@ func (c *Client) DownloadChannel(ctx context.Context, cfg *DownloadConfig) error
 		AccessToken:   cfg.AccessToken,
 		OutputDir:     channelDir,
 		Overwrite:     cfg.Overwrite,
-		SelectVariant: cfg.SelectVariant, // false for channels
+		Skip:          cfg.Skip,
+		SelectVariant: cfg.SelectVariant,
 		VideoIDs:      videoIDs,
 	}
 

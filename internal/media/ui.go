@@ -34,7 +34,12 @@ func promptUser(prompt string) (string, error) {
 
 func handleExistingOutputFile(outputFile string, cfg *DownloadConfig) (string, error) {
 	if cfg.Overwrite {
+		fmt.Printf("File %s already exists. Overwriting it.\n", outputFile)
 		return outputFile, nil
+	}
+	if cfg.Skip {
+		fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
+		return "", nil
 	}
 	if _, err := os.Stat(outputFile); err == nil {
 		if isInteractive() {

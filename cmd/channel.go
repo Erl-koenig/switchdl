@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/Erl-koenig/switchdl/internal/keyringconfig"
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
@@ -15,6 +17,10 @@ var channelCmd = &cobra.Command{
 You can either download all videos at once or select which ones specifically.`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if channelCfg.Overwrite && channelCfg.Skip {
+			return fmt.Errorf("cannot use --overwrite (-w) and --skip (-s) flags together")
+		}
+
 		for _, channelID := range args {
 			channelCfg.ChannelID = channelID
 
@@ -41,9 +47,11 @@ func init() {
 	channelCmd.Flags().
 		StringVarP(&channelCfg.AccessToken, "token", "t", "", "Access token for API authentication (overrides configured token)")
 	channelCmd.Flags().
+		BoolVarP(&channelCfg.Skip, "skip", "s", false, "Skip existing files")
+	channelCmd.Flags().
 		BoolVarP(&channelCfg.Overwrite, "overwrite", "w", false, "Force overwrite of existing files")
 	channelCmd.Flags().
 		BoolVarP(&channelCfg.All, "all", "a", false, "Download all videos without prompting")
 	channelCmd.Flags().
-		BoolVarP(&channelCfg.SelectVariant, "select-variant", "s", false, "List all video variants (quality) and prompt for selection")
+		BoolVarP(&channelCfg.SelectVariant, "select-variant", "v", false, "List all video variants (quality) and prompt for selection")
 }
