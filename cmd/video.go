@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/Erl-koenig/switchdl/internal/keyringconfig"
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
 )
@@ -17,27 +15,15 @@ var videoCmd = &cobra.Command{
   switchdl video 1234567890 -o /path/to/dir -f custom_name.mp4 -w -v`,
 	Args: cobra.MinimumNArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if downloadCfg.Overwrite && downloadCfg.Skip {
-			return fmt.Errorf("cannot use --overwrite (-w) and --skip (-s) flags together")
-		}
-
 		filename, _ := cmd.Flags().GetString("filename")
 		if filename != "" && len(args) > 1 {
 			return fmt.Errorf(
 				"custom filename (-f/--filename) can only be used when downloading a single video",
 			)
 		}
-
-		token, err := keyringconfig.GetAccessToken(downloadCfg.AccessToken)
-		if err != nil {
-			return err
-		}
-		downloadCfg.AccessToken = token
-
-		return os.MkdirAll(downloadCfg.OutputDir, media.DefaultDirectoryPermissions)
+		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Video-specific flags
 		downloadCfg.VideoIDs = args
 		downloadCfg.Filename, _ = cmd.Flags().GetString("filename")
 

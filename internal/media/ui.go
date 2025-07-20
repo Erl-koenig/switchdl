@@ -37,11 +37,11 @@ func handleExistingOutputFile(outputFile string, cfg *DownloadConfig) (string, e
 		fmt.Printf("File %s already exists. Overwriting it.\n", outputFile)
 		return outputFile, nil
 	}
-	if cfg.Skip {
-		fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
-		return "", nil
-	}
 	if _, err := os.Stat(outputFile); err == nil {
+		if cfg.Skip {
+			fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
+			return "", nil
+		}
 		if isInteractive() {
 			for {
 				choice, err := promptUser(

@@ -2,8 +2,10 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/Erl-koenig/switchdl/internal/keyringconfig"
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
 )
@@ -13,6 +15,19 @@ var downloadCfg media.DownloadConfig
 var rootCmd = &cobra.Command{
 	Use:   "switchdl",
 	Short: "A CLI tool for downloading videos from SwitchTube",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if downloadCfg.Overwrite && downloadCfg.Skip {
+			return fmt.Errorf("cannot use --overwrite (-w) and --skip (-s) flags together")
+		}
+
+		token, err := keyringconfig.GetAccessToken(downloadCfg.AccessToken)
+		if err != nil {
+			return err
+		}
+		downloadCfg.AccessToken = token
+
+		return os.MkdirAll(downloadCfg.OutputDir, media.DefaultDirectoryPermissions)
+	},
 }
 
 func Execute() {

@@ -1,9 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/Erl-koenig/switchdl/internal/keyringconfig"
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
 )
@@ -16,24 +13,10 @@ You can either download all videos at once or select which ones specifically.`,
 	Example: ` switchdl channel abcdef1234
  switchdl channel abcdef1234 ghijk56789 -a`,
 	Args: cobra.MinimumNArgs(1),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if downloadCfg.Overwrite && downloadCfg.Skip {
-			return fmt.Errorf("cannot use --overwrite (-w) and --skip (-s) flags together")
-		}
 
-		token, err := keyringconfig.GetAccessToken(downloadCfg.AccessToken)
-		if err != nil {
-			return err
-		}
-		downloadCfg.AccessToken = token
-		return nil
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client := media.NewClient(downloadCfg.AccessToken)
-
-		// Channel-specific flags
 		downloadCfg.All, _ = cmd.Flags().GetBool("all")
-
 		for _, channelID := range args {
 			downloadCfg.ChannelID = channelID
 			if err := client.DownloadChannel(cmd.Context(), &downloadCfg); err != nil {
