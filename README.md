@@ -4,17 +4,17 @@
 
 ## Installation
 
+### From release
+
+Download a pre-compiled binary for your operating system from the [GitHub Releases](https://github.com/Erl-koenig/switchdl/releases) page.
+
 ### From source
 
-Ensure you have a working Go environment (Go 1.24.4+ is required).
+Ensure you have a working Go environment (Go 1.24.4+ is required). Note: The `version` command will show `dev` as it is built from source.
 
 ```bash
 go install github.com/Erl-koenig/switchdl@latest
 ```
-
-### From release
-
-Alternatively, you can download a pre-compiled binary for your operating system from the [GitHub Releases](https://github.com/Erl-koenig/switchdl/releases) page.
 
 ## Configuration
 

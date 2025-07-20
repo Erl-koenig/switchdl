@@ -13,7 +13,6 @@ You can either download all videos at once or select which ones specifically.`,
 	Example: ` switchdl channel abcdef1234
  switchdl channel abcdef1234 ghijk56789 -a`,
 	Args: cobra.MinimumNArgs(1),
-
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client := media.NewClient(downloadCfg.AccessToken)
 		downloadCfg.All, _ = cmd.Flags().GetBool("all")
