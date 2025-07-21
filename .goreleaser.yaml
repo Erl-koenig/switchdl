@@ -17,10 +17,10 @@ builds:
     hooks:
       post:
         - |
-          if [ "{{ .Os }}" = "linux" ] && [ "{{ .Arch }}" = "amd64" ]; then
+          sh -c 'if [ "{{ .Os }}" = "linux" ] && [ "{{ .Arch }}" = "amd64" ]; then
             "{{ .Path }}" man
             test -f man/switchdl.1 || (echo "manpage not generated!" && exit 1)
-          fi
+          fi'
 
 archives:
   - formats: [tar.gz]
