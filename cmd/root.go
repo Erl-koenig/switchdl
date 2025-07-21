@@ -16,6 +16,10 @@ var rootCmd = &cobra.Command{
 	Use:   "switchdl",
 	Short: "A CLI tool for downloading videos from SwitchTube",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if cmd.Name() == "man" || cmd.Name() == "completion" || cmd.Name() == "version" {
+			return nil
+		}
+
 		if downloadCfg.Overwrite && downloadCfg.Skip {
 			return fmt.Errorf("cannot use --overwrite (-w) and --skip (-s) flags together")
 		}
