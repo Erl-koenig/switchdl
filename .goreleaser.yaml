@@ -4,6 +4,7 @@ before:
   hooks:
     - go mod tidy
     - mkdir -p man
+    - go run main.go man
 
 builds:
   - env:
@@ -14,12 +15,6 @@ builds:
       - darwin
     ldflags:
       - -s -w -X github.com/Erl-koenig/switchdl/cmd.version={{.Version}}
-    post:
-      - |
-        if [ "{{ .Os }}" = "linux" ] && [ "{{ .Arch }}" = "amd64" ]; then
-          "{{ .Path }}" man
-          test -f man/switchdl.1 || (echo "manpage not generated!" && exit 1)
-        fi
 
 archives:
   - formats: [tar.gz]
@@ -65,6 +60,5 @@ homebrew_casks:
       branch: main
       name: homebrew-switchdl
       token: "{{ .Env.HOMEBREW_TOKEN }}"
-    custom_block: |
-      manpages = Dir["#{prefix}/man/*"]
-      man1.install manpages
+    manpages:
+      - man/*.1
