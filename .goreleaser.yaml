@@ -14,12 +14,13 @@ builds:
       - darwin
     ldflags:
       - -s -w -X github.com/Erl-koenig/switchdl/cmd.version={{.Version}}
-    post:
-      - |
-        if [ "{{ .Os }}" = "linux" ] && [ "{{ .Arch }}" = "amd64" ]; then
-          "{{ .Path }}" man
-          test -f man/switchdl.1 || (echo "manpage not generated!" && exit 1)
-        fi
+    hooks:
+      post:
+        - |
+          if [ "{{ .Os }}" = "linux" ] && [ "{{ .Arch }}" = "amd64" ]; then
+            "{{ .Path }}" man
+            test -f man/switchdl.1 || (echo "manpage not generated!" && exit 1)
+          fi
 
 archives:
   - formats: [tar.gz]
