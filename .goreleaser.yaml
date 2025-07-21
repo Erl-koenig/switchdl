@@ -49,7 +49,7 @@ release:
 
     Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
 
-brews:
+homebrew_casks:
   - name: switchdl
     homepage: https://github.com/Erl-koenig/switchdl
     description: "A CLI tool for downloading videos from SwitchTube"
@@ -60,6 +60,18 @@ brews:
       branch: main
       name: homebrew-switchdl
       token: "{{ .Env.HOMEBREW_TOKEN }}"
-    install: |
-      bin.install "switchdl"
-      man1.install Dir["man/*.1"]
+    manpages:
+      - man/switchdl.1
+      - man/switchdl-video.1
+      - man/switchdl-channel.1
+      - man/switchdl-version.1
+      - man/switchdl-configure.1
+      - man/switchdl-configure-show.1
+      - man/switchdl-configure-delete.1
+      - man/switchdl-configure-validate.1
+      - man/switchdl-completion-man.1
+      - man/switchdl-completion.1
+      - man/switchdl-completion-bash.1
+      - man/switchdl-completion-fish.1
+      - man/switchdl-completion-powershell.1
+      - man/switchdl-completion-zsh.1
