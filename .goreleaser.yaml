@@ -69,7 +69,7 @@ homebrew_casks:
       - man/switchdl-configure-show.1
       - man/switchdl-configure-delete.1
       - man/switchdl-configure-validate.1
-      - man/switchdl-completion-man.1
+      - man/switchdl-man.1
       - man/switchdl-completion.1
       - man/switchdl-completion-bash.1
       - man/switchdl-completion-fish.1
