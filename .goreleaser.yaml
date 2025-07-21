@@ -61,4 +61,16 @@ homebrew_casks:
       name: homebrew-switchdl
       token: "{{ .Env.HOMEBREW_TOKEN }}"
     manpages:
-      - man/*.1
+      - man/switchdl-channel.1
+      - man/switchdl-completion-bash.1
+      - man/switchdl-completion-fish.1
+      - man/switchdl-completion-powershell.1
+      - man/switchdl-completion-zsh.1
+      - man/switchdl-completion.1
+      - man/switchdl-configure-delete.1
+      - man/switchdl-configure-show.1
+      - man/switchdl-configure-validate.1
+      - man/switchdl-configure.1
+      - man/switchdl-version.1
+      - man/switchdl-video.1
+      - man/switchdl.1
