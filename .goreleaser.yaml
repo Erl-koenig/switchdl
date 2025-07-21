@@ -4,6 +4,7 @@ before:
   hooks:
     - go mod tidy
     - mkdir -p man
+    - go run main.go man
 
 builds:
   - env:
@@ -14,13 +15,6 @@ builds:
       - darwin
     ldflags:
       - -s -w -X github.com/Erl-koenig/switchdl/cmd.version={{.Version}}
-    hooks:
-      post:
-        - |
-          sh -c 'if [ "{{ .Os }}" = "linux" ] && [ "{{ .Arch }}" = "amd64" ]; then
-            "{{ .Path }}" man
-            test -f man/switchdl.1 || (echo "manpage not generated!" && exit 1)
-          fi'
 
 archives:
   - formats: [tar.gz]
