@@ -5,6 +5,7 @@ import (
 
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var videoCmd = &cobra.Command{
@@ -15,7 +16,7 @@ var videoCmd = &cobra.Command{
   switchdl video 1234567890 -o /path/to/dir -f custom_name.mp4 -w -v`,
 	Args: cobra.MinimumNArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		filename, _ := cmd.Flags().GetString("filename")
+		filename := viper.GetString("filename")
 		if filename != "" && len(args) > 1 {
 			return fmt.Errorf(
 				"custom filename (-f/--filename) can only be used when downloading a single video",
@@ -25,7 +26,7 @@ var videoCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		downloadCfg.VideoIDs = args
-		downloadCfg.Filename, _ = cmd.Flags().GetString("filename")
+		downloadCfg.Filename = viper.GetString("filename")
 
 		client := media.NewClient(downloadCfg.AccessToken)
 		summary := client.DownloadVideos(cmd.Context(), &downloadCfg)
@@ -40,4 +41,5 @@ var videoCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(videoCmd)
 	videoCmd.Flags().StringP("filename", "f", "", "Output filename (defaults to video title)")
+	cobra.CheckErr(viper.BindPFlag("filename", videoCmd.Flags().Lookup("filename")))
 }

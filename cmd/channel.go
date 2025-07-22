@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var channelCmd = &cobra.Command{
@@ -15,7 +16,7 @@ You can either download all videos at once or select which ones specifically.`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client := media.NewClient(downloadCfg.AccessToken)
-		downloadCfg.All, _ = cmd.Flags().GetBool("all")
+		downloadCfg.All = viper.GetBool("all")
 		for _, channelID := range args {
 			downloadCfg.ChannelID = channelID
 			if err := client.DownloadChannel(cmd.Context(), &downloadCfg); err != nil {
@@ -29,4 +30,5 @@ You can either download all videos at once or select which ones specifically.`,
 func init() {
 	rootCmd.AddCommand(channelCmd)
 	channelCmd.Flags().BoolP("all", "a", false, "Download all videos without prompting")
+	cobra.CheckErr(viper.BindPFlag("all", channelCmd.Flags().Lookup("all")))
 }

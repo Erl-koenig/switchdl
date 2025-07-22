@@ -17,12 +17,12 @@ type DownloadConfig struct {
 	AccessToken   string
 	ChannelID     string
 	VideoIDs      []string
-	OutputDir     string
-	Filename      string
-	Overwrite     bool
-	Skip          bool
-	SelectVariant bool
-	All           bool
+	OutputDir     string `mapstructure:"output-dir"`
+	Filename      string `mapstructure:"filename"`
+	Overwrite     bool   `mapstructure:"overwrite"`
+	Skip          bool   `mapstructure:"skip"`
+	SelectVariant bool   `mapstructure:"select-variant"`
+	All           bool   `mapstructure:"all"`
 }
 
 type DownloadSummary struct {

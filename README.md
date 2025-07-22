@@ -26,6 +26,10 @@ go install github.com/Erl-koenig/switchdl@latest
 
 ## Configuration
 
+`switchdl` can be configured using command-line flags or a configuration file.
+
+### Access Token Configuration
+
 Before you can download videos, you need to configure `switchdl` with your SwitchTube access token.
 
 The CLI will store it using your operating system's credential management system (macOS Keychain, Windows Credential Manager, Linux Secret Service). Once configured, you can download videos without specifiying it with the token flag. Note from SwitchTube: "Access tokens expire automatically when they have not been used for 60 days".
@@ -34,6 +38,23 @@ The CLI will store it using your operating system's credential management system
 - **Delete Stored Token:** `switchdl configure delete`, removes the token from your system's credential store.
 - **Show Stored Token:** `switchdl configure show`, shows if an access token is currently stored or not.
 - **Validate Stored Token:** `switchdl configure validate`, validates the stored token with the SwitchTube API.
+
+### Configuration File
+
+`switchdl` supports configuration via a `config.yaml` file. This file can be placed in the current working directory or in `~/.config/switchdl/`.
+
+Example `config.yaml`:
+
+```yaml
+output-dir: /path/to/downloads
+skip: true
+overwrite: false
+select-variant: false
+filename: ""
+all: false
+```
+
+Command-line flags will always override settings specified in the configuration file.
 
 ## Usage
 
