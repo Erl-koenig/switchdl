@@ -2,8 +2,8 @@
 package keyringconfig
 
 import (
+	"errors"
 	"fmt"
-	"log"
 
 	"github.com/zalando/go-keyring"
 )
@@ -23,8 +23,7 @@ func GetAccessToken(currentToken string) (string, error) {
 		return token, nil
 	}
 
-	log.Printf("Keyring error: %v", err)
-	if err != keyring.ErrNotFound {
+	if !errors.Is(err, keyring.ErrNotFound) {
 		return "", fmt.Errorf(
 			"failed to access keyring: %w. Ensure the keyring service is running and you have appropriate permissions",
 			err,
@@ -40,7 +39,7 @@ func GetAccessToken(currentToken string) (string, error) {
 
 func SetAccessToken(token string) error {
 	if token == "" {
-		return fmt.Errorf("access token cannot be empty")
+		return errors.New("access token cannot be empty")
 	}
 	if err := keyring.Set(Service, User, token); err != nil {
 		return fmt.Errorf("failed to save token to keyring: %w", err)
@@ -49,7 +48,7 @@ func SetAccessToken(token string) error {
 }
 
 func DeleteAccessToken() error {
-	if err := keyring.Delete(Service, User); err != nil && err != keyring.ErrNotFound {
+	if err := keyring.Delete(Service, User); err != nil && !errors.Is(err, keyring.ErrNotFound) {
 		return fmt.Errorf("failed to delete token: %w", err)
 	}
 	return nil
