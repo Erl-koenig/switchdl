@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -37,7 +38,7 @@ To delete the stored token:
 			return fmt.Errorf("failed to read token: %w", err)
 		}
 		token = strings.TrimSpace(token)
-		if err := keyringconfig.SetAccessToken(token); err != nil {
+		if err = keyringconfig.SetAccessToken(token); err != nil {
 			return err
 		}
 		fmt.Println("Access token successfully saved.")
@@ -52,12 +53,11 @@ var showCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, err := keyringconfig.GetAccessToken("")
-		switch err {
-		case nil:
+		if err == nil {
 			fmt.Println("An access token is currently stored.")
-		case keyring.ErrNotFound:
+		} else if errors.Is(err, keyring.ErrNotFound) {
 			fmt.Println("No access token is currently stored.")
-		default:
+		} else {
 			return fmt.Errorf("failed to check token status: %w", err)
 		}
 		return nil
@@ -75,7 +75,7 @@ var validateCmd = &cobra.Command{
 		}
 
 		client := media.NewClient(token)
-		if err := client.ValidateToken(cmd.Context()); err != nil {
+		if err = client.ValidateToken(cmd.Context()); err != nil {
 			fmt.Println(err)
 			if strings.Contains(err.Error(), "invalid or expired") {
 				fmt.Println("Please run 'switchdl configure' to update it.")

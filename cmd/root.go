@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,7 +31,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if downloadCfg.Overwrite && downloadCfg.Skip {
-			return fmt.Errorf("cannot use --overwrite (-w) and --skip (-s) flags together")
+			return errors.New("cannot use --overwrite (-w) and --skip (-s) flags together")
 		}
 
 		token, err := keyringconfig.GetAccessToken(downloadCfg.AccessToken)
@@ -53,16 +54,22 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&downloadCfg.OutputDir, "output-dir", "o", ".", "Output directory path")
+	rootCmd.PersistentFlags().
+		StringVarP(&downloadCfg.OutputDir, "output-dir", "o", ".", "Output directory path")
 	rootCmd.PersistentFlags().BoolVarP(&downloadCfg.Skip, "skip", "s", false, "Skip existing files")
-	rootCmd.PersistentFlags().BoolVarP(&downloadCfg.Overwrite, "overwrite", "w", false, "Force overwrite of existing files")
-	rootCmd.PersistentFlags().BoolVarP(&downloadCfg.SelectVariant, "select-variant", "v", false, "List all video variants (quality) and prompt for selection")
-	rootCmd.PersistentFlags().String("token", "", "Access token for API authentication (overrides configured token)")
+	rootCmd.PersistentFlags().
+		BoolVarP(&downloadCfg.Overwrite, "overwrite", "w", false, "Force overwrite of existing files")
+	rootCmd.PersistentFlags().
+		BoolVarP(&downloadCfg.SelectVariant, "select-variant", "v", false, "List all video variants (quality) and prompt for selection")
+	rootCmd.PersistentFlags().
+		String("token", "", "Access token for API authentication (overrides configured token)")
 
 	cobra.CheckErr(viper.BindPFlag("output-dir", rootCmd.PersistentFlags().Lookup("output-dir")))
 	cobra.CheckErr(viper.BindPFlag("skip", rootCmd.PersistentFlags().Lookup("skip")))
 	cobra.CheckErr(viper.BindPFlag("overwrite", rootCmd.PersistentFlags().Lookup("overwrite")))
-	cobra.CheckErr(viper.BindPFlag("select-variant", rootCmd.PersistentFlags().Lookup("select-variant")))
+	cobra.CheckErr(
+		viper.BindPFlag("select-variant", rootCmd.PersistentFlags().Lookup("select-variant")),
+	)
 }
 
 func initConfig() {
@@ -79,7 +86,7 @@ func initConfig() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err == nil {
+	if err = viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 }

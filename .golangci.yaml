@@ -448,3 +448,7 @@ linters:
           - gosec
           - noctx
           - wrapcheck
+      - path: ^cmd/ # disable unused params linter for cobra-specifc files
+        linters:
+          - revive
+        text: unused-parameter
