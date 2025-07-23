@@ -54,33 +54,10 @@ func (c *Client) ValidateToken(ctx context.Context) error {
 
 func (c *Client) fetchVideoDetails(ctx context.Context, videoID string) (*VideoDetails, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s", c.BaseURL, videoID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request for video details: %w", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get video details: %w", err)
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", cerr)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code for video details: %d", resp.StatusCode)
-	}
-
 	var details VideoDetails
-	if err := json.NewDecoder(resp.Body).Decode(&details); err != nil {
-		return nil, fmt.Errorf("failed to parse video details response: %w", err)
+	if err := c.getJSON(ctx, url, &details); err != nil {
+		return nil, fmt.Errorf("fetch video details failed: %w", err)
 	}
-
 	return &details, nil
 }
 
@@ -89,33 +66,10 @@ func (c *Client) fetchVideoVariants(
 	videoID string,
 ) ([]VideoVariant, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s/video_variants", c.BaseURL, videoID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get video variants: %w", err)
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", cerr)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
 	var variants []VideoVariant
-	if err := json.NewDecoder(resp.Body).Decode(&variants); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
+	if err := c.getJSON(ctx, url, &variants); err != nil {
+		return nil, fmt.Errorf("fetch video variants failed: %w", err)
 	}
-
 	return variants, nil
 }
 
@@ -160,49 +114,33 @@ func (c *Client) fetchChannelDetails(
 	channelID string,
 ) (*ChannelDetails, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/channels/%s", c.BaseURL, channelID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request for channel details: %w", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get channel details: %w", err)
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", cerr)
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code for channel details: %d", resp.StatusCode)
-	}
-
 	var details ChannelDetails
-	if err := json.NewDecoder(resp.Body).Decode(&details); err != nil {
-		return nil, fmt.Errorf("failed to parse channel details response: %w", err)
+	if err := c.getJSON(ctx, url, &details); err != nil {
+		return nil, fmt.Errorf("fetch channel details failed: %w", err)
 	}
-
 	return &details, nil
 }
 
 func (c *Client) fetchChannelVideos(ctx context.Context, channelID string) ([]ChannelVideo, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/channels/%s/videos", c.BaseURL, channelID)
+	var videos []ChannelVideo
+	if err := c.getJSON(ctx, url, &videos); err != nil {
+		return nil, fmt.Errorf("fetch channel videos failed: %w", err)
+	}
+	return videos, nil
+}
+
+func (c *Client) getJSON(ctx context.Context, url string, target any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request for channel videos: %w", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
-
 	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch channel videos: %w", err)
+		return fmt.Errorf("failed to do request: %w", err)
 	}
 	defer func() {
 		if cerr := resp.Body.Close(); cerr != nil && err == nil {
@@ -211,13 +149,11 @@ func (c *Client) fetchChannelVideos(ctx context.Context, channelID string) ([]Ch
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code for channel videos: %d", resp.StatusCode)
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	var videos []ChannelVideo
-	if err := json.NewDecoder(resp.Body).Decode(&videos); err != nil {
-		return nil, fmt.Errorf("failed to parse channel videos response: %w", err)
+	if err = json.NewDecoder(resp.Body).Decode(target); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
 	}
-
-	return videos, nil
+	return nil
 }
