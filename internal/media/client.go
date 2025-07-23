@@ -24,7 +24,7 @@ func NewClient(accessToken string) *Client {
 
 func (c *Client) ValidateToken(ctx context.Context) error {
 	url := fmt.Sprintf("%s/api/v1/profiles/me", c.BaseURL)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create validation request: %w", err)
 	}
@@ -54,7 +54,7 @@ func (c *Client) ValidateToken(ctx context.Context) error {
 
 func (c *Client) fetchVideoDetails(ctx context.Context, videoID string) (*VideoDetails, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s", c.BaseURL, videoID)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for video details: %w", err)
 	}
@@ -89,7 +89,7 @@ func (c *Client) fetchVideoVariants(
 	videoID string,
 ) ([]VideoVariant, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/videos/%s/video_variants", c.BaseURL, videoID)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -123,7 +123,7 @@ func (c *Client) downloadVideoFile(
 	ctx context.Context,
 	downloadURL, outputFile string,
 ) (err error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -160,7 +160,7 @@ func (c *Client) fetchChannelDetails(
 	channelID string,
 ) (*ChannelDetails, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/channels/%s", c.BaseURL, channelID)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for channel details: %w", err)
 	}
@@ -192,7 +192,7 @@ func (c *Client) fetchChannelDetails(
 
 func (c *Client) fetchChannelVideos(ctx context.Context, channelID string) ([]ChannelVideo, error) {
 	url := fmt.Sprintf("%s/api/v1/browse/channels/%s/videos", c.BaseURL, channelID)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for channel videos: %w", err)
 	}

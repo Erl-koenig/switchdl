@@ -180,10 +180,7 @@ func selectVariantInteractively(variants []VideoVariant) (*VideoVariant, error) 
 	}
 }
 
-func (c *Client) promptForQualitySelection(
-	ctx context.Context,
-	cfg *DownloadConfig,
-) (bool, error) {
+func (c *Client) promptForQualitySelection(_ context.Context, cfg *DownloadConfig) (bool, error) {
 	fmt.Println("\nMultiple videos detected. How would you like to handle video quality selection?")
 
 	for {
@@ -222,24 +219,28 @@ func displayVideosInTable(videos []*VideoDetails) error {
 	fmt.Println("\nAvailable videos:")
 
 	const (
-		minWidth = 0
-		tabWidth = 0
-		padding  = 3
-		padChar  = ' '
-		flags    = 0
+		minWidth      = 0
+		tabWidth      = 0
+		padding       = 3
+		padChar       = ' '
+		flags         = 0
+		indexWidth    = 6
+		titleWidth    = 15
+		durationWidth = 10
+		dateWidth     = 12
 	)
 	writer := tabwriter.NewWriter(os.Stdout, minWidth, tabWidth, padding, padChar, flags)
 
 	if _, err := fmt.Fprintln(writer, "Index \t Title \t Duration \t Date"); err != nil {
 		return fmt.Errorf("failed to write table header: %w", err)
 	}
-	if _, err := fmt.Fprintln(writer, strings.Repeat("─", 6)+"\t"+strings.Repeat("─", 15)+"\t"+strings.Repeat("─", 10)+"\t"+strings.Repeat("─", 12)); err != nil {
+	if _, err := fmt.Fprintln(writer, strings.Repeat("─", indexWidth)+"\t"+strings.Repeat("─", titleWidth)+"\t"+strings.Repeat("─", durationWidth)+"\t"+strings.Repeat("─", durationWidth)); err != nil {
 		return fmt.Errorf("failed to write table separator: %w", err)
 	}
 
 	for i, v := range videos {
 		formattedDuration, formattedDate := formatVideoDetails(v)
-		indexStr := fmt.Sprintf("%d", i+1)
+		indexStr := strconv.Itoa(i + 1)
 
 		if _, err := fmt.Fprintf(writer, "%s \t %-s \t %s \t %s\n", indexStr, v.Title, formattedDuration, formattedDate); err != nil {
 			return fmt.Errorf("failed to write video row %d: %w", i+1, err)
@@ -248,11 +249,12 @@ func displayVideosInTable(videos []*VideoDetails) error {
 	return writer.Flush()
 }
 
-func formatVideoDetails(v *VideoDetails) (duration, date string) {
+func formatVideoDetails(v *VideoDetails) (string, string) {
 	d := time.Duration(v.DurationInMilliseconds) * time.Millisecond
 	hours := int(d.Hours())
-	minutes := int(d.Minutes()) % 60
-	seconds := int(d.Seconds()) % 60
+	minutes := int(d.Minutes()) % 60 //nolint:mnd // obvious, wrap minutes in an hour
+	seconds := int(d.Seconds()) % 60 //nolint:mnd // obvious, wrap seconds in a minute
+
 	formattedDuration := fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds) // HH:MM:SS
 
 	parsedTime, err := time.Parse(time.RFC3339, v.PublishedAt)
@@ -294,12 +296,12 @@ func promptForVideoSelection(videos []*VideoDetails) ([]*VideoDetails, error) {
 	}
 }
 
-func parseVideoSelection(selection string, max int) ([]int, error) {
+func parseVideoSelection(selection string, lenVideos int) ([]int, error) {
 	var finalIndices []int
 	seen := make(map[int]bool)
 	parts := strings.Split(selection, ",")
 	for _, part := range parts {
-		indices, err := parseSelectionPart(strings.TrimSpace(part), max)
+		indices, err := parseSelectionPart(strings.TrimSpace(part), lenVideos)
 		if err != nil {
 			return nil, err
 		}
@@ -314,16 +316,17 @@ func parseVideoSelection(selection string, max int) ([]int, error) {
 	return finalIndices, nil
 }
 
-func parseSelectionPart(part string, max int) ([]int, error) {
+func parseSelectionPart(part string, lenVideos int) ([]int, error) {
+	const expectedRangeParts = 2
 	if strings.Contains(part, "-") {
 		rangeParts := strings.Split(part, "-")
-		if len(rangeParts) != 2 {
+		if len(rangeParts) != expectedRangeParts {
 			return nil, fmt.Errorf("invalid range format: %s", part)
 		}
 		start, err1 := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
 		end, err2 := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
 
-		if err1 != nil || err2 != nil || start < 1 || end > max || start > end {
+		if err1 != nil || err2 != nil || start < 1 || end > lenVideos || start > end {
 			return nil, fmt.Errorf("invalid range: %s", part)
 		}
 
@@ -335,7 +338,7 @@ func parseSelectionPart(part string, max int) ([]int, error) {
 	}
 
 	idx, err := strconv.Atoi(part)
-	if err != nil || idx < 1 || idx > max {
+	if err != nil || idx < 1 || idx > lenVideos {
 		return nil, fmt.Errorf("invalid video number: %s", part)
 	}
 	return []int{idx - 1}, nil

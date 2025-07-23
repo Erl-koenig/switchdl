@@ -75,22 +75,9 @@ func (c *Client) DownloadVideo(
 	}
 
 	if variant == nil {
-		variants, err := c.fetchVideoVariants(ctx, videoID)
+		variant, err = c.resolveVideoVariant(ctx, videoID, cfg)
 		if err != nil {
 			return err
-		}
-
-		if cfg.SelectVariant && isInteractive() && len(variants) > 1 {
-			variant, err = selectVariantInteractively(variants)
-			if err != nil {
-				return err
-			}
-		} else {
-			variant = selectBestVariant(variants)
-		}
-
-		if variant == nil {
-			return fmt.Errorf("no video/mp4 variant found for video ID: %s", videoID)
 		}
 	}
 
@@ -118,6 +105,26 @@ func (c *Client) DownloadVideo(
 
 	downloadURL := c.BaseURL + variant.Path
 	return c.downloadVideoFile(ctx, downloadURL, outputFile)
+}
+
+func (c *Client) resolveVideoVariant(
+	ctx context.Context,
+	videoID string,
+	cfg *DownloadConfig,
+) (*VideoVariant, error) {
+	variants, err := c.fetchVideoVariants(ctx, videoID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(variants) == 0 {
+		return nil, fmt.Errorf("no video/mp4 variant found for video ID: %s", videoID)
+	}
+
+	if cfg.SelectVariant && isInteractive() && len(variants) > 1 {
+		return selectVariantInteractively(variants)
+	}
+	return selectBestVariant(variants), nil
 }
 
 func (c *Client) DownloadVideos(ctx context.Context, cfg *DownloadConfig) *DownloadSummary {
