@@ -39,23 +39,25 @@ func handleExistingOutputFile(outputFile string, cfg *DownloadConfig) (string, e
 	}
 
 	_, statErr := os.Stat(outputFile)
-	if statErr != nil && !os.IsNotExist(statErr) {
+	if statErr == nil { // File exists
+		if cfg.Skip {
+			fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
+			return "", nil
+		}
+
+		if !isInteractive() {
+			return "", fmt.Errorf(
+				"output file %s already exists. Use -w / --overwrite to replace it or -s / --skip to skip",
+				outputFile,
+			)
+		}
+
+		return promptForFileAction(outputFile, cfg)
+	} else if !os.IsNotExist(statErr) {
 		return "", fmt.Errorf("error checking output file %s: %w", outputFile, statErr)
 	}
 
-	if cfg.Skip {
-		fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
-		return "", nil
-	}
-
-	if !isInteractive() {
-		return "", fmt.Errorf(
-			"output file %s already exists. Use -w / --overwrite to replace it",
-			outputFile,
-		)
-	}
-
-	return promptForFileAction(outputFile, cfg)
+	return outputFile, nil // file doesn't exist
 }
 
 func promptForFileAction(outputFile string, cfg *DownloadConfig) (string, error) {
