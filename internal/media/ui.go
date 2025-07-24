@@ -37,53 +37,75 @@ func handleExistingOutputFile(outputFile string, cfg *DownloadConfig) (string, e
 		fmt.Printf("File %s already exists. Overwriting it.\n", outputFile)
 		return outputFile, nil
 	}
-	if _, err := os.Stat(outputFile); err == nil {
-		if cfg.Skip {
-			fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
-			return "", nil
-		}
-		if isInteractive() {
-			for {
-				choice, err := promptUser(
-					fmt.Sprintf(
-						"Output file %s already exists.\n[O]verwrite / [R]ename / [S]kip? (o/r/s): ",
-						outputFile,
-					),
-				)
-				if err != nil {
-					return "", fmt.Errorf("failed to read user input: %w", err)
-				}
-				switch strings.ToLower(choice) {
-				case "o", "overwrite":
-					return outputFile, nil
-				case "r", "rename":
-					for {
-						newName, err := promptUser("Enter new filename: ")
-						if err != nil {
-							return "", fmt.Errorf("failed to read new filename: %w", err)
-						}
-						newName = ensureMp4Suffix(newName)
-						newPath := filepath.Join(cfg.OutputDir, newName)
-						if _, err := os.Stat(newPath); os.IsNotExist(err) {
-							return newPath, nil
-						} else {
-							fmt.Printf("File %s already exists. Please choose another name.\n", newName)
-						}
-					}
-				case "s", "skip":
-					fmt.Println("Skipping download.")
-					return "", nil
-				default:
-					fmt.Println("Invalid choice. Please enter o, r, or s.")
-				}
-			}
-		} else {
-			return "", fmt.Errorf("output file %s already exists. Use -w / --overwrite to replace it", outputFile)
-		}
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("error checking output file %s: %w", outputFile, err)
+
+	_, statErr := os.Stat(outputFile)
+	if statErr != nil && !os.IsNotExist(statErr) {
+		return "", fmt.Errorf("error checking output file %s: %w", outputFile, statErr)
 	}
-	return outputFile, nil
+	if statErr != nil {
+		return "", fmt.Errorf("error checking output file %s: %w", outputFile, statErr)
+	}
+
+	if cfg.Skip {
+		fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
+		return "", nil
+	}
+
+	if !isInteractive() {
+		return "", fmt.Errorf(
+			"output file %s already exists. Use -w / --overwrite to replace it",
+			outputFile,
+		)
+	}
+
+	return promptForFileAction(outputFile, cfg)
+}
+
+func promptForFileAction(outputFile string, cfg *DownloadConfig) (string, error) {
+	for {
+		choice, inputErr := promptUser(
+			fmt.Sprintf(
+				"Output file %s already exists.\n[O]verwrite / [R]ename / [S]kip? (o/r/s): ",
+				outputFile,
+			),
+		)
+		if inputErr != nil {
+			return "", fmt.Errorf("failed to read user input: %w", inputErr)
+		}
+
+		switch strings.ToLower(choice) {
+		case "o", "overwrite":
+			return outputFile, nil
+		case "r", "rename":
+			newPath, renameErr := promptForNewFilename(cfg)
+			if renameErr != nil {
+				return "", renameErr
+			}
+			return newPath, nil
+		case "s", "skip":
+			fmt.Println("Skipping download.")
+			return "", nil
+		default:
+			fmt.Println("Invalid choice. Please enter o, r, or s.")
+		}
+	}
+}
+
+func promptForNewFilename(cfg *DownloadConfig) (string, error) {
+	for {
+		newName, inputErr := promptUser("Enter new filename: ")
+		if inputErr != nil {
+			return "", fmt.Errorf("failed to read new filename: %w", inputErr)
+		}
+
+		newName = ensureMp4Suffix(newName)
+		newPath := filepath.Join(cfg.OutputDir, newName)
+
+		if _, statErr := os.Stat(newPath); os.IsNotExist(statErr) {
+			return newPath, nil
+		}
+		fmt.Printf("File %s already exists. Please choose another name.\n", newName)
+	}
 }
 
 func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (err error) {
@@ -103,8 +125,11 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 	contentLength := resp.Header.Get("Content-Length")
 	var totalSize int64
 	if contentLength != "" {
-		if size, err := strconv.ParseInt(contentLength, 10, 64); err == nil {
-			totalSize = size
+		var parseErr error
+		totalSize, parseErr = strconv.ParseInt(contentLength, 10, 64)
+		if parseErr != nil {
+			// TODO: handle parseErr
+			totalSize = 0
 		}
 	}
 
