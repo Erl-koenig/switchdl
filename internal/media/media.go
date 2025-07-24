@@ -48,11 +48,10 @@ type ChannelVideo struct {
 }
 
 type VideoVariant struct {
-	Path string `json:"path"`
-	// NOTE: not used yet
-	ExpiresAt string `json:"expires_at"`
+	Path      string `json:"path"`
 	Name      string `json:"name"`       // Label to distinguish variants, not display title
 	MediaType string `json:"media_type"` // Expected to be video/mp4 for video downloads
+	ExpiresAt string `json:"expires_at"` // NOTE: not used
 }
 
 type VideoDetails struct {
