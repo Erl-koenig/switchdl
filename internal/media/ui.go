@@ -42,9 +42,6 @@ func handleExistingOutputFile(outputFile string, cfg *DownloadConfig) (string, e
 	if statErr != nil && !os.IsNotExist(statErr) {
 		return "", fmt.Errorf("error checking output file %s: %w", outputFile, statErr)
 	}
-	if statErr != nil {
-		return "", fmt.Errorf("error checking output file %s: %w", outputFile, statErr)
-	}
 
 	if cfg.Skip {
 		fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
