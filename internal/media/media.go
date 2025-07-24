@@ -62,7 +62,7 @@ type VideoDetails struct {
 	DurationInMilliseconds int    `json:"duration_in_milliseconds"` // Duration of the video expressed in milliseconds. The value can be slightly different from the duration in the actual media files
 }
 
-func (c *Client) DownloadVideo(
+func (c *Client) downloadSingleVideo(
 	ctx context.Context,
 	cfg *DownloadConfig,
 	variant *VideoVariant,
@@ -75,22 +75,9 @@ func (c *Client) DownloadVideo(
 	}
 
 	if variant == nil {
-		variants, err := c.fetchVideoVariants(ctx, videoID)
+		variant, err = c.resolveVideoVariant(ctx, videoID, cfg)
 		if err != nil {
 			return err
-		}
-
-		if cfg.SelectVariant && isInteractive() && len(variants) > 1 {
-			variant, err = selectVariantInteractively(variants)
-			if err != nil {
-				return err
-			}
-		} else {
-			variant = selectBestVariant(variants)
-		}
-
-		if variant == nil {
-			return fmt.Errorf("no video/mp4 variant found for video ID: %s", videoID)
 		}
 	}
 
@@ -117,7 +104,27 @@ func (c *Client) DownloadVideo(
 	}
 
 	downloadURL := c.BaseURL + variant.Path
-	return c.downloadVideoFile(ctx, downloadURL, outputFile)
+	return c.downloadFileFromURL(ctx, downloadURL, outputFile)
+}
+
+func (c *Client) resolveVideoVariant(
+	ctx context.Context,
+	videoID string,
+	cfg *DownloadConfig,
+) (*VideoVariant, error) {
+	variants, err := c.fetchVideoVariants(ctx, videoID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(variants) == 0 {
+		return nil, fmt.Errorf("no video/mp4 variant found for video ID: %s", videoID)
+	}
+
+	if cfg.SelectVariant && isInteractive() && len(variants) > 1 {
+		return selectVariantInteractively(variants)
+	}
+	return selectBestVariant(variants), nil
 }
 
 func (c *Client) DownloadVideos(ctx context.Context, cfg *DownloadConfig) *DownloadSummary {
@@ -126,53 +133,21 @@ func (c *Client) DownloadVideos(ctx context.Context, cfg *DownloadConfig) *Downl
 		Results: make([]DownloadResult, 0, len(cfg.VideoIDs)),
 	}
 
-	// store pre-selected variants (1. fetch all variants, 2. select variants, 3. download each)
-	videoVariants := make(map[string]*VideoVariant)
-	if cfg.SelectVariant && isInteractive() {
-		individualSelection, err := c.promptForQualitySelection(ctx, cfg)
-		if err != nil {
-			fmt.Printf("Warning: failed to select quality: %v. Using best quality.\n", err)
-			cfg.SelectVariant = false
-		} else if individualSelection { // select variants individually
-			for i, videoID := range cfg.VideoIDs {
-				fmt.Printf("\nProcessing video %d/%d (ID: %s)\n", i+1, summary.Total, videoID)
-				variants, err := c.fetchVideoVariants(ctx, videoID)
-				if err != nil {
-					fmt.Printf("Failed to fetch variants for video %s: %v\n", videoID, err)
-					continue
-				}
-				variant, err := selectVariantInteractively(variants)
-				if err != nil {
-					fmt.Printf("Failed to select variant for video %s: %v\n", videoID, err)
-					continue
-				}
-				videoVariants[videoID] = variant
-			}
-		}
-	}
-
 	fmt.Printf("Starting download of %d video(s)\n", summary.Total)
 
+	videoVariants := c.prepareVariants(ctx, cfg, summary)
+
 	for i, videoID := range cfg.VideoIDs {
-		fmt.Printf("\nProcessing video %d/%d (ID: %s)\n", i+1, summary.Total, videoID)
-
-		videoCfg := &DownloadConfig{
-			AccessToken:   cfg.AccessToken,
-			OutputDir:     cfg.OutputDir,
-			Overwrite:     cfg.Overwrite,
-			Skip:          cfg.Skip,
-			SelectVariant: cfg.SelectVariant,
-			VideoIDs:      []string{videoID},
-			Filename:      cfg.Filename,
-		}
-
-		variant := videoVariants[videoID] // will be nil if flag not provided
-		err := c.DownloadVideo(ctx, videoCfg, variant)
-		result := DownloadResult{VideoID: videoID, Error: err}
-
-		if err != nil {
+		result := c.processVideoDownload(
+			ctx,
+			videoID,
+			i,
+			summary.Total,
+			cfg,
+			videoVariants[videoID],
+		)
+		if result.Error != nil {
 			summary.Failed++
-			fmt.Printf("Failed to download video %s: %v\n", videoID, err)
 		} else {
 			summary.Succeeded++
 		}
@@ -206,9 +181,9 @@ func (c *Client) DownloadChannel(ctx context.Context, cfg *DownloadConfig) error
 
 	videos := make([]*VideoDetails, len(channelVideos))
 	for i, v := range channelVideos {
-		details, err := c.fetchVideoDetails(ctx, v.ID)
-		if err != nil {
-			return fmt.Errorf("failed to fetch video details for %s: %w", v.ID, err)
+		details, fetchErr := c.fetchVideoDetails(ctx, v.ID)
+		if fetchErr != nil {
+			return fmt.Errorf("failed to fetch video details for %s: %w", v.ID, fetchErr)
 		}
 		videos[i] = details
 	}
@@ -230,8 +205,8 @@ func (c *Client) DownloadChannel(ctx context.Context, cfg *DownloadConfig) error
 
 	// create subdirectory for channel videos
 	channelDir := filepath.Join(cfg.OutputDir, sanitizeFilename(channelDetails.Name))
-	if err := os.MkdirAll(channelDir, DefaultDirectoryPermissions); err != nil {
-		return fmt.Errorf("failed to create channel directory: %w", err)
+	if mkdirErr := os.MkdirAll(channelDir, DefaultDirectoryPermissions); mkdirErr != nil {
+		return fmt.Errorf("failed to create channel directory: %w", mkdirErr)
 	}
 	fmt.Printf("Downloading %d video(s) to '%s'\n", len(selectedVideos), channelDir)
 
@@ -252,4 +227,75 @@ func (c *Client) DownloadChannel(ctx context.Context, cfg *DownloadConfig) error
 	c.DownloadVideos(ctx, videoCfg)
 
 	return nil
+}
+
+func (c *Client) prepareVariants(
+	ctx context.Context,
+	cfg *DownloadConfig,
+	summary *DownloadSummary,
+) map[string]*VideoVariant {
+	videoVariants := make(map[string]*VideoVariant)
+
+	if !cfg.SelectVariant || !isInteractive() {
+		return videoVariants
+	}
+
+	individualSelection, selectionErr := c.promptForQualitySelection(ctx, cfg)
+	if selectionErr != nil {
+		fmt.Printf("Warning: failed to select quality: %v. Using best quality.\n", selectionErr)
+		cfg.SelectVariant = false
+		return videoVariants
+	}
+
+	if !individualSelection {
+		return videoVariants
+	}
+
+	for i, videoID := range cfg.VideoIDs {
+		fmt.Printf("\nProcessing video %d/%d (ID: %s)\n", i+1, summary.Total, videoID)
+
+		variants, variantErr := c.fetchVideoVariants(ctx, videoID)
+		if variantErr != nil {
+			fmt.Printf("Failed to fetch variants for video %s: %v\n", videoID, variantErr)
+			continue
+		}
+
+		variant, selectErr := selectVariantInteractively(variants)
+		if selectErr != nil {
+			fmt.Printf("Failed to select variant for video %s: %v\n", videoID, selectErr)
+			continue
+		}
+
+		videoVariants[videoID] = variant
+	}
+
+	return videoVariants
+}
+
+func (c *Client) processVideoDownload(
+	ctx context.Context,
+	videoID string,
+	index int,
+	total int,
+	cfg *DownloadConfig,
+	variant *VideoVariant,
+) DownloadResult {
+	fmt.Printf("\nProcessing video %d/%d (ID: %s)\n", index+1, total, videoID)
+
+	videoCfg := &DownloadConfig{
+		AccessToken:   cfg.AccessToken,
+		OutputDir:     cfg.OutputDir,
+		Overwrite:     cfg.Overwrite,
+		Skip:          cfg.Skip,
+		SelectVariant: cfg.SelectVariant,
+		VideoIDs:      []string{videoID},
+		Filename:      cfg.Filename,
+	}
+
+	err := c.downloadSingleVideo(ctx, videoCfg, variant)
+	if err != nil {
+		fmt.Printf("Failed to download video %s: %v\n", videoID, err)
+	}
+
+	return DownloadResult{VideoID: videoID, Error: err}
 }

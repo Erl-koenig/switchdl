@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/Erl-koenig/switchdl/internal/media"
 	"github.com/spf13/cobra"
@@ -18,7 +18,7 @@ var videoCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		filename := viper.GetString("filename")
 		if filename != "" && len(args) > 1 {
-			return fmt.Errorf(
+			return errors.New(
 				"custom filename (-f/--filename) can only be used when downloading a single video",
 			)
 		}
@@ -32,7 +32,7 @@ var videoCmd = &cobra.Command{
 		summary := client.DownloadVideos(cmd.Context(), &downloadCfg)
 
 		if summary.Succeeded == 0 {
-			return fmt.Errorf("failed to download any videos")
+			return errors.New("failed to download any videos")
 		}
 		return nil
 	},

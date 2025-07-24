@@ -37,53 +37,72 @@ func handleExistingOutputFile(outputFile string, cfg *DownloadConfig) (string, e
 		fmt.Printf("File %s already exists. Overwriting it.\n", outputFile)
 		return outputFile, nil
 	}
-	if _, err := os.Stat(outputFile); err == nil {
-		if cfg.Skip {
-			fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
-			return "", nil
-		}
-		if isInteractive() {
-			for {
-				choice, err := promptUser(
-					fmt.Sprintf(
-						"Output file %s already exists.\n[O]verwrite / [R]ename / [S]kip? (o/r/s): ",
-						outputFile,
-					),
-				)
-				if err != nil {
-					return "", fmt.Errorf("failed to read user input: %w", err)
-				}
-				switch strings.ToLower(choice) {
-				case "o", "overwrite":
-					return outputFile, nil
-				case "r", "rename":
-					for {
-						newName, err := promptUser("Enter new filename: ")
-						if err != nil {
-							return "", fmt.Errorf("failed to read new filename: %w", err)
-						}
-						newName = ensureMp4Suffix(newName)
-						newPath := filepath.Join(cfg.OutputDir, newName)
-						if _, err := os.Stat(newPath); os.IsNotExist(err) {
-							return newPath, nil
-						} else {
-							fmt.Printf("File %s already exists. Please choose another name.\n", newName)
-						}
-					}
-				case "s", "skip":
-					fmt.Println("Skipping download.")
-					return "", nil
-				default:
-					fmt.Println("Invalid choice. Please enter o, r, or s.")
-				}
-			}
-		} else {
-			return "", fmt.Errorf("output file %s already exists. Use -w / --overwrite to replace it", outputFile)
-		}
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("error checking output file %s: %w", outputFile, err)
+
+	_, statErr := os.Stat(outputFile)
+	if statErr != nil && !os.IsNotExist(statErr) {
+		return "", fmt.Errorf("error checking output file %s: %w", outputFile, statErr)
 	}
-	return outputFile, nil
+
+	if cfg.Skip {
+		fmt.Printf("File %s already exists. Skipping download.\n", outputFile)
+		return "", nil
+	}
+
+	if !isInteractive() {
+		return "", fmt.Errorf(
+			"output file %s already exists. Use -w / --overwrite to replace it",
+			outputFile,
+		)
+	}
+
+	return promptForFileAction(outputFile, cfg)
+}
+
+func promptForFileAction(outputFile string, cfg *DownloadConfig) (string, error) {
+	for {
+		choice, inputErr := promptUser(
+			fmt.Sprintf(
+				"Output file %s already exists.\n[O]verwrite / [R]ename / [S]kip? (o/r/s): ",
+				outputFile,
+			),
+		)
+		if inputErr != nil {
+			return "", fmt.Errorf("failed to read user input: %w", inputErr)
+		}
+
+		switch strings.ToLower(choice) {
+		case "o", "overwrite":
+			return outputFile, nil
+		case "r", "rename":
+			newPath, renameErr := promptForNewFilename(cfg)
+			if renameErr != nil {
+				return "", renameErr
+			}
+			return newPath, nil
+		case "s", "skip":
+			fmt.Println("Skipping download.")
+			return "", nil
+		default:
+			fmt.Println("Invalid choice. Please enter o, r, or s.")
+		}
+	}
+}
+
+func promptForNewFilename(cfg *DownloadConfig) (string, error) {
+	for {
+		newName, inputErr := promptUser("Enter new filename: ")
+		if inputErr != nil {
+			return "", fmt.Errorf("failed to read new filename: %w", inputErr)
+		}
+
+		newName = ensureMp4Suffix(newName)
+		newPath := filepath.Join(cfg.OutputDir, newName)
+
+		if _, statErr := os.Stat(newPath); os.IsNotExist(statErr) {
+			return newPath, nil
+		}
+		fmt.Printf("File %s already exists. Please choose another name.\n", newName)
+	}
 }
 
 func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (err error) {
@@ -103,8 +122,11 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 	contentLength := resp.Header.Get("Content-Length")
 	var totalSize int64
 	if contentLength != "" {
-		if size, err := strconv.ParseInt(contentLength, 10, 64); err == nil {
-			totalSize = size
+		var parseErr error
+		totalSize, parseErr = strconv.ParseInt(contentLength, 10, 64)
+		if parseErr != nil {
+			// TODO: handle parseErr
+			totalSize = 0
 		}
 	}
 
@@ -180,10 +202,7 @@ func selectVariantInteractively(variants []VideoVariant) (*VideoVariant, error) 
 	}
 }
 
-func (c *Client) promptForQualitySelection(
-	ctx context.Context,
-	cfg *DownloadConfig,
-) (bool, error) {
+func (c *Client) promptForQualitySelection(_ context.Context, cfg *DownloadConfig) (bool, error) {
 	fmt.Println("\nMultiple videos detected. How would you like to handle video quality selection?")
 
 	for {
@@ -222,24 +241,28 @@ func displayVideosInTable(videos []*VideoDetails) error {
 	fmt.Println("\nAvailable videos:")
 
 	const (
-		minWidth = 0
-		tabWidth = 0
-		padding  = 3
-		padChar  = ' '
-		flags    = 0
+		minWidth      = 0
+		tabWidth      = 0
+		padding       = 3
+		padChar       = ' '
+		flags         = 0
+		indexWidth    = 6
+		titleWidth    = 15
+		durationWidth = 10
+		dateWidth     = 12
 	)
 	writer := tabwriter.NewWriter(os.Stdout, minWidth, tabWidth, padding, padChar, flags)
 
 	if _, err := fmt.Fprintln(writer, "Index \t Title \t Duration \t Date"); err != nil {
 		return fmt.Errorf("failed to write table header: %w", err)
 	}
-	if _, err := fmt.Fprintln(writer, strings.Repeat("─", 6)+"\t"+strings.Repeat("─", 15)+"\t"+strings.Repeat("─", 10)+"\t"+strings.Repeat("─", 12)); err != nil {
+	if _, err := fmt.Fprintln(writer, strings.Repeat("─", indexWidth)+"\t"+strings.Repeat("─", titleWidth)+"\t"+strings.Repeat("─", durationWidth)+"\t"+strings.Repeat("─", durationWidth)); err != nil {
 		return fmt.Errorf("failed to write table separator: %w", err)
 	}
 
 	for i, v := range videos {
 		formattedDuration, formattedDate := formatVideoDetails(v)
-		indexStr := fmt.Sprintf("%d", i+1)
+		indexStr := strconv.Itoa(i + 1)
 
 		if _, err := fmt.Fprintf(writer, "%s \t %-s \t %s \t %s\n", indexStr, v.Title, formattedDuration, formattedDate); err != nil {
 			return fmt.Errorf("failed to write video row %d: %w", i+1, err)
@@ -248,11 +271,12 @@ func displayVideosInTable(videos []*VideoDetails) error {
 	return writer.Flush()
 }
 
-func formatVideoDetails(v *VideoDetails) (duration, date string) {
+func formatVideoDetails(v *VideoDetails) (string, string) {
 	d := time.Duration(v.DurationInMilliseconds) * time.Millisecond
 	hours := int(d.Hours())
-	minutes := int(d.Minutes()) % 60
-	seconds := int(d.Seconds()) % 60
+	minutes := int(d.Minutes()) % 60 //nolint:mnd // obvious, wrap minutes in an hour
+	seconds := int(d.Seconds()) % 60 //nolint:mnd // obvious, wrap seconds in a minute
+
 	formattedDuration := fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds) // HH:MM:SS
 
 	parsedTime, err := time.Parse(time.RFC3339, v.PublishedAt)
@@ -294,12 +318,12 @@ func promptForVideoSelection(videos []*VideoDetails) ([]*VideoDetails, error) {
 	}
 }
 
-func parseVideoSelection(selection string, max int) ([]int, error) {
+func parseVideoSelection(selection string, lenVideos int) ([]int, error) {
 	var finalIndices []int
 	seen := make(map[int]bool)
 	parts := strings.Split(selection, ",")
 	for _, part := range parts {
-		indices, err := parseSelectionPart(strings.TrimSpace(part), max)
+		indices, err := parseSelectionPart(strings.TrimSpace(part), lenVideos)
 		if err != nil {
 			return nil, err
 		}
@@ -314,16 +338,17 @@ func parseVideoSelection(selection string, max int) ([]int, error) {
 	return finalIndices, nil
 }
 
-func parseSelectionPart(part string, max int) ([]int, error) {
+func parseSelectionPart(part string, lenVideos int) ([]int, error) {
+	const expectedRangeParts = 2
 	if strings.Contains(part, "-") {
 		rangeParts := strings.Split(part, "-")
-		if len(rangeParts) != 2 {
+		if len(rangeParts) != expectedRangeParts {
 			return nil, fmt.Errorf("invalid range format: %s", part)
 		}
 		start, err1 := strconv.Atoi(strings.TrimSpace(rangeParts[0]))
 		end, err2 := strconv.Atoi(strings.TrimSpace(rangeParts[1]))
 
-		if err1 != nil || err2 != nil || start < 1 || end > max || start > end {
+		if err1 != nil || err2 != nil || start < 1 || end > lenVideos || start > end {
 			return nil, fmt.Errorf("invalid range: %s", part)
 		}
 
@@ -335,7 +360,7 @@ func parseSelectionPart(part string, max int) ([]int, error) {
 	}
 
 	idx, err := strconv.Atoi(part)
-	if err != nil || idx < 1 || idx > max {
+	if err != nil || idx < 1 || idx > lenVideos {
 		return nil, fmt.Errorf("invalid video number: %s", part)
 	}
 	return []int{idx - 1}, nil
