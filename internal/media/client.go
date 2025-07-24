@@ -73,7 +73,7 @@ func (c *Client) fetchVideoVariants(
 	return variants, nil
 }
 
-func (c *Client) downloadVideoFile(
+func (c *Client) downloadFileFromURL(
 	ctx context.Context,
 	downloadURL, outputFile string,
 ) (err error) {
