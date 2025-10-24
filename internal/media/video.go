@@ -75,11 +75,12 @@ func (c *Client) prepareVideoDownloads(
 		}
 
 		var outputFilename string
-		if cfg.Filename != "" && total == 1 {
+		switch {
+		case cfg.Filename != "" && total == 1:
 			outputFilename = ensureMp4Suffix(cfg.Filename)
-		} else if result.details.Title != "" {
+		case result.details.Title != "":
 			outputFilename = ensureMp4Suffix(sanitizeFilename(result.details.Title))
-		} else {
+		default:
 			outputFilename = fmt.Sprintf("video_%s.mp4", videoID)
 		}
 

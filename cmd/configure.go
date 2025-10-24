@@ -30,7 +30,7 @@ To validate the stored token against the API:
 To delete the stored token:
   switchdl configure delete`,
 	Args: cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Enter your SwitchTube access token: ")
 		token, err := reader.ReadString('\n')
@@ -51,7 +51,7 @@ var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Check if an access token is currently stored",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		_, err := keyringconfig.GetAccessToken("")
 		if err == nil {
 			fmt.Println("An access token is currently stored.")
@@ -68,7 +68,7 @@ var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate the stored access token with the SwitchTube API",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		token, err := keyringconfig.GetAccessToken("")
 		if err != nil {
 			return err
@@ -91,7 +91,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete the stored access token",
 	Args:  cobra.NoArgs,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if err := keyringconfig.DeleteAccessToken(); err != nil {
 			return err
 		}

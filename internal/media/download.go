@@ -35,12 +35,19 @@ func NewDownloadWorkerPool(
 	}
 }
 
-// Start launches the worker goroutines
-func (p *DownloadWorkerPool) Start() {
+// start launches the worker goroutines
+func (p *DownloadWorkerPool) start() {
 	for range NumWorkers {
 		p.wg.Add(1)
 		go p.worker()
 	}
+}
+
+// close signals that no more jobs will be submitted and waits for completion
+func (p *DownloadWorkerPool) close() {
+	close(p.jobs)
+	p.wg.Wait()
+	close(p.results)
 }
 
 // worker processes download jobs from the jobs channel
@@ -71,13 +78,6 @@ func (p *DownloadWorkerPool) downloadJob(job PreparedDownload) DownloadResult {
 	}
 }
 
-// Close signals that no more jobs will be submitted and waits for completion
-func (p *DownloadWorkerPool) Close() {
-	close(p.jobs)
-	p.wg.Wait()
-	close(p.results)
-}
-
 func (c *Client) ExecuteConcurrentDownloads(
 	ctx context.Context,
 	prepared []PreparedDownload,
@@ -88,14 +88,14 @@ func (c *Client) ExecuteConcurrentDownloads(
 	progress := mpb.NewWithContext(ctx, mpb.WithWidth(progressBarWidth))
 
 	pool := NewDownloadWorkerPool(ctx, c, progress)
-	pool.Start()
+	pool.start()
 
 	// Submit all jobs
 	go func() {
 		for _, job := range prepared {
 			pool.jobs <- job
 		}
-		pool.Close()
+		pool.close()
 	}()
 
 	// Collect results

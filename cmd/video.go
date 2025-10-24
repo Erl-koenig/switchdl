@@ -15,7 +15,7 @@ var videoCmd = &cobra.Command{
   switchdl video 1234567890 9876543210 3134859203
   switchdl video 1234567890 -o /path/to/dir -f custom_name.mp4 -w -v`,
 	Args: cobra.MinimumNArgs(1),
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(_ *cobra.Command, args []string) error {
 		filename := viper.GetString("filename")
 		if filename != "" && len(args) > 1 {
 			return errors.New(

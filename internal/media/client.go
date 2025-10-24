@@ -26,13 +26,13 @@ func NewClient(accessToken string) *Client {
 }
 
 func (c *Client) ValidateToken(ctx context.Context) error {
-	url := fmt.Sprintf("%s/api/v1/profiles/me", c.BaseURL)
+	url := c.BaseURL + "/api/v1/profiles/me"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create validation request: %w", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
+	req.Header.Set("Authorization", "Token "+c.AccessToken)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.Client.Do(req)
@@ -136,7 +136,7 @@ func (c *Client) getJSON(ctx context.Context, url string, target any) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.AccessToken))
+	req.Header.Set("Authorization", "Token "+c.AccessToken)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.Client.Do(req)
