@@ -17,13 +17,15 @@ You can either download all videos at once or select which ones specifically.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client := media.NewClient(downloadCfg.AccessToken)
 		downloadCfg.All = viper.GetBool("all")
-		for _, channelID := range args {
-			downloadCfg.ChannelID = channelID
-			if err := client.DownloadChannel(cmd.Context(), &downloadCfg); err != nil {
-				return err // Return on the first channel that fails
-			}
+
+		// Handle multiple channels with upfront preparation
+		if len(args) > 1 {
+			return client.DownloadMultipleChannels(cmd.Context(), args, &downloadCfg)
 		}
-		return nil
+
+		// Single channel
+		downloadCfg.ChannelID = args[0]
+		return client.DownloadChannel(cmd.Context(), &downloadCfg)
 	},
 }
 

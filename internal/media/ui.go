@@ -17,6 +17,18 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
+const (
+	barStyleLBound     = "["
+	barStyleFiller     = "="
+	barStyleTip        = ">"
+	barStylePadding    = "-"
+	barStyleRBound     = "]"
+	decoratorSeparator = " | "
+	doneMessage        = "done"
+	unknownSizeMessage = " (unknown size)"
+	progressBarWidth   = 64
+)
+
 func isInteractive() bool {
 	fi, err := os.Stdin.Stat()
 	return err == nil && (fi.Mode()&os.ModeCharDevice) != 0
@@ -107,32 +119,26 @@ func promptForNewFilename(cfg *DownloadConfig) (string, error) {
 	}
 }
 
-func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (err error) {
-	const (
-		barStyleLBound     = "["
-		barStyleFiller     = "="
-		barStyleTip        = ">"
-		barStylePadding    = "-"
-		barStyleRBound     = "]"
-		decoratorSeparator = " | "
-		downloadMessage    = "Downloading:"
-		doneMessage        = "done"
-		unknownSizeMessage = " (unknown size)"
-		progressBarWidth   = 64
-	)
-
+func copyWithProgress(
+	ctx context.Context,
+	resp *http.Response,
+	out *os.File,
+	progress *mpb.Progress,
+	barName string,
+) error {
 	contentLength := resp.Header.Get("Content-Length")
 	var totalSize int64
 	if contentLength != "" {
-		var parseErr error
-		totalSize, parseErr = strconv.ParseInt(contentLength, 10, 64)
-		if parseErr != nil {
-			// TODO: handle parseErr
-			totalSize = 0
-		}
+		totalSize, _ = strconv.ParseInt(contentLength, 10, 64)
 	}
 
-	p := mpb.NewWithContext(ctx, mpb.WithWidth(progressBarWidth))
+	// keep old behavior for single downloads
+	localProgress := false
+	if progress == nil {
+		progress = mpb.NewWithContext(ctx, mpb.WithWidth(progressBarWidth))
+		localProgress = true
+	}
+
 	barStyle := mpb.BarStyle().
 		Lbound(barStyleLBound).
 		Filler(barStyleFiller).
@@ -142,10 +148,10 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 
 	var bar *mpb.Bar
 	if totalSize > 0 {
-		bar = p.New(totalSize,
+		bar = progress.New(totalSize,
 			barStyle,
 			mpb.PrependDecorators(
-				decor.Name(downloadMessage, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
+				decor.Name(barName, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
 				decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), doneMessage),
 			),
 			mpb.AppendDecorators(
@@ -155,10 +161,10 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 			),
 		)
 	} else {
-		bar = p.New(0,
+		bar = progress.New(0,
 			barStyle,
 			mpb.PrependDecorators(
-				decor.Name(downloadMessage, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
+				decor.Name(barName, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
 				decor.CountersKibiByte("% .2f"),
 			),
 			mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
@@ -166,19 +172,17 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 	}
 
 	reader := bar.ProxyReader(resp.Body)
-	defer func() {
-		if cerr := reader.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close reader: %w", cerr)
-		}
-	}()
+	defer reader.Close()
 
-	_, err = io.Copy(out, reader)
+	_, err := io.Copy(out, reader)
 	if err != nil {
 		return fmt.Errorf("failed to write video to file: %w", err)
 	}
 
-	p.Wait()
-	fmt.Printf("Video \"%s\" downloaded successfully \n", out.Name())
+	if localProgress {
+		progress.Wait()
+	}
+
 	return nil
 }
 
@@ -258,7 +262,7 @@ func displayVideosInTable(videos []*VideoDetails) error {
 	if _, err := fmt.Fprintln(writer, "Index \t Title \t Duration \t Date"); err != nil {
 		return fmt.Errorf("failed to write table header: %w", err)
 	}
-	if _, err := fmt.Fprintln(writer, strings.Repeat("─", indexWidth)+"\t"+strings.Repeat("─", titleWidth)+"\t"+strings.Repeat("─", durationWidth)+"\t"+strings.Repeat("─", durationWidth)); err != nil {
+	if _, err := fmt.Fprintln(writer, strings.Repeat("─", indexWidth)+"\t"+strings.Repeat("─", titleWidth)+"\t"+strings.Repeat("─", durationWidth)+"\t"+strings.Repeat("─", dateWidth)); err != nil {
 		return fmt.Errorf("failed to write table separator: %w", err)
 	}
 

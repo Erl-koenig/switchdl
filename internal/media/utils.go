@@ -1,7 +1,6 @@
 package media
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -37,20 +36,4 @@ func selectBestVariant(variants []VideoVariant) *VideoVariant {
 		}
 	}
 	return nil
-}
-
-func printDownloadSummary(summary *DownloadSummary) {
-	fmt.Printf("\nDownload Summary:\n")
-	fmt.Printf("Total videos: %d\n", summary.Total)
-	fmt.Printf("Successfully downloaded: %d\n", summary.Succeeded)
-	fmt.Printf("Failed: %d\n", summary.Failed)
-
-	if summary.Failed > 0 {
-		fmt.Println("\nFailed downloads:")
-		for _, result := range summary.Results {
-			if result.Error != nil {
-				fmt.Printf("- Video %s: %v\n", result.VideoID, result.Error)
-			}
-		}
-	}
 }

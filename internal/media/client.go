@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
+
+	"github.com/vbauerster/mpb/v8"
 )
 
 type Client struct {
@@ -36,11 +39,7 @@ func (c *Client) ValidateToken(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to send validation request: %w", err)
 	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", cerr)
-		}
-	}()
+	defer resp.Body.Close()
 
 	switch resp.StatusCode {
 	case http.StatusOK:
@@ -73,10 +72,13 @@ func (c *Client) fetchVideoVariants(
 	return variants, nil
 }
 
-func (c *Client) downloadFileFromURL(
+func (c *Client) downloadPreparedVideo(
 	ctx context.Context,
-	downloadURL, outputFile string,
+	prepared PreparedDownload,
+	progress *mpb.Progress,
 ) (err error) {
+	downloadURL := c.BaseURL + prepared.Variant.Path
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
@@ -86,17 +88,13 @@ func (c *Client) downloadFileFromURL(
 	if err != nil {
 		return fmt.Errorf("failed to download video: %w", err)
 	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", cerr)
-		}
-	}()
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code for download: %d", resp.StatusCode)
 	}
 
-	out, err := os.Create(outputFile)
+	out, err := os.Create(prepared.OutputFile)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
@@ -106,7 +104,10 @@ func (c *Client) downloadFileFromURL(
 		}
 	}()
 
-	return copyWithProgress(ctx, resp, out)
+	barName := fmt.Sprintf("[%d/%d] %s",
+		prepared.Index, prepared.Total, filepath.Base(prepared.OutputFile))
+
+	return copyWithProgress(ctx, resp, out, progress, barName)
 }
 
 func (c *Client) fetchChannelDetails(
@@ -142,11 +143,7 @@ func (c *Client) getJSON(ctx context.Context, url string, target any) error {
 	if err != nil {
 		return fmt.Errorf("failed to do request: %w", err)
 	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close response body: %w", cerr)
-		}
-	}()
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
