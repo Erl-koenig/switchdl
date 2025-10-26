@@ -146,6 +146,8 @@ func copyWithProgress(
 		bar = preCreatedBar
 		if totalSize > 0 {
 			bar.SetTotal(totalSize, false)
+		} else {
+			bar.SetTotal(1, false)
 		}
 	} else {
 		// Create bar for single downloads
@@ -187,6 +189,12 @@ func copyWithProgress(
 	_, err := io.Copy(out, reader)
 	if err != nil {
 		return fmt.Errorf("failed to write video to file: %w", err)
+	}
+
+	// ensure bar completes
+	if preCreatedBar != nil {
+		bar.SetCurrent(bar.Current())
+		bar.SetTotal(bar.Current(), true)
 	}
 
 	if localProgress {
