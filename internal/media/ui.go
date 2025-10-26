@@ -125,6 +125,7 @@ func copyWithProgress(
 	out *os.File,
 	progress *mpb.Progress,
 	barName string,
+	preCreatedBar *mpb.Bar,
 ) error {
 	contentLength := resp.Header.Get("Content-Length")
 	var totalSize int64
@@ -139,36 +140,45 @@ func copyWithProgress(
 		localProgress = true
 	}
 
-	barStyle := mpb.BarStyle().
-		Lbound(barStyleLBound).
-		Filler(barStyleFiller).
-		Tip(barStyleTip).
-		Padding(barStylePadding).
-		Rbound(barStyleRBound)
-
 	var bar *mpb.Bar
-	if totalSize > 0 {
-		bar = progress.New(totalSize,
-			barStyle,
-			mpb.PrependDecorators(
-				decor.Name(barName, decor.WCSyncSpaceR),
-				decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), doneMessage),
-			),
-			mpb.AppendDecorators(
-				decor.Percentage(),
-				decor.Name(decoratorSeparator),
-				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
-			),
-		)
+	if preCreatedBar != nil {
+		// Use pre-created bar and update its total
+		bar = preCreatedBar
+		if totalSize > 0 {
+			bar.SetTotal(totalSize, false)
+		}
 	} else {
-		bar = progress.New(0,
-			barStyle,
-			mpb.PrependDecorators(
-				decor.Name(barName, decor.WCSyncSpaceR),
-				decor.CountersKibiByte("% .2f"),
-			),
-			mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
-		)
+		// Create bar for single downloads
+		barStyle := mpb.BarStyle().
+			Lbound(barStyleLBound).
+			Filler(barStyleFiller).
+			Tip(barStyleTip).
+			Padding(barStylePadding).
+			Rbound(barStyleRBound)
+
+		if totalSize > 0 {
+			bar = progress.New(totalSize,
+				barStyle,
+				mpb.PrependDecorators(
+					decor.Name(barName, decor.WCSyncSpaceR),
+					decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), " done"),
+				),
+				mpb.AppendDecorators(
+					decor.Percentage(),
+					decor.Name(decoratorSeparator),
+					decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
+				),
+			)
+		} else {
+			bar = progress.New(0,
+				barStyle,
+				mpb.PrependDecorators(
+					decor.Name(barName, decor.WCSyncSpaceR),
+					decor.CountersKibiByte("% .2f"),
+				),
+				mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
+			)
+		}
 	}
 
 	reader := bar.ProxyReader(resp.Body)

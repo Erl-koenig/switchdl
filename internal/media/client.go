@@ -76,6 +76,7 @@ func (c *Client) downloadPreparedVideo(
 	ctx context.Context,
 	prepared PreparedDownload,
 	progress *mpb.Progress,
+	bar *mpb.Bar,
 ) (err error) {
 	downloadURL := c.BaseURL + prepared.Variant.Path
 
@@ -107,7 +108,7 @@ func (c *Client) downloadPreparedVideo(
 	barName := fmt.Sprintf("[%d/%d] %s",
 		prepared.Index, prepared.Total, filepath.Base(prepared.OutputFile))
 
-	return copyWithProgress(ctx, resp, out, progress, barName)
+	return copyWithProgress(ctx, resp, out, progress, barName, bar)
 }
 
 func (c *Client) fetchChannelDetails(

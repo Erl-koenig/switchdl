@@ -159,7 +159,7 @@ func (c *Client) downloadSinglePreparedVideo(
 
 	fmt.Printf("Downloading video \"%s\"\n", filepath.Base(prepared.OutputFile))
 
-	err := c.downloadPreparedVideo(ctx, prepared, nil)
+	err := c.downloadPreparedVideo(ctx, prepared, nil, nil)
 	if err != nil {
 		fmt.Printf("Failed to download video %s: %v\n", prepared.VideoID, err)
 		summary.Failed = 1
