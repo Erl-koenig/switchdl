@@ -151,7 +151,7 @@ func copyWithProgress(
 		bar = progress.New(totalSize,
 			barStyle,
 			mpb.PrependDecorators(
-				decor.Name(barName, decor.WCSyncSpace),
+				decor.Name(barName, decor.WCSyncSpaceR),
 				decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), doneMessage),
 			),
 			mpb.AppendDecorators(
@@ -164,7 +164,7 @@ func copyWithProgress(
 		bar = progress.New(0,
 			barStyle,
 			mpb.PrependDecorators(
-				decor.Name(barName, decor.WCSyncSpace),
+				decor.Name(barName, decor.WCSyncSpaceR),
 				decor.CountersKibiByte("% .2f"),
 			),
 			mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
