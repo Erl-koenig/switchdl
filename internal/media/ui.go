@@ -235,9 +235,7 @@ func copyWithProgress(
 		return fmt.Errorf("failed to write video to file: %w", err)
 	}
 
-	// ensure bar completes
 	if preCreatedBar != nil {
-		bar.SetCurrent(bar.Current())
 		bar.SetTotal(bar.Current(), true)
 	}
 
