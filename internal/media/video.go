@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sync"
 )
 
 type VideoDetails struct {
@@ -116,35 +117,44 @@ func (c *Client) prepareVideoDownloads(
 // fetchAllVideoDetails fetches video details for all videos concurrently
 func (c *Client) fetchAllVideoDetails(ctx context.Context, videoIDs []string) []fetchResult {
 	total := len(videoIDs)
+	jobs := make(chan fetchJob, total)
 	resultsChan := make(chan fetchResult, total)
-	semaphore := make(chan struct{}, NumWorkers)
+
+	var wg sync.WaitGroup
+	for range NumWorkers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				result := fetchResult{index: job.index, videoID: job.videoID}
+
+				details, err := c.fetchVideoDetails(ctx, job.videoID)
+				if err != nil {
+					result.err = fmt.Errorf("failed to fetch video details: %w", err)
+				} else {
+					result.details = details
+				}
+
+				resultsChan <- result
+			}
+		}()
+	}
 
 	for i, videoID := range videoIDs {
-		go func(idx int, vID string) {
-			semaphore <- struct{}{}        // Acquire
-			defer func() { <-semaphore }() // Release
-
-			result := fetchResult{index: idx, videoID: vID}
-
-			details, err := c.fetchVideoDetails(ctx, vID)
-			if err != nil {
-				result.err = fmt.Errorf("failed to fetch video details: %w", err)
-				resultsChan <- result
-				return
-			}
-			result.details = details
-
-			resultsChan <- result
-		}(i, videoID)
+		jobs <- fetchJob{index: i, videoID: videoID}
 	}
+	close(jobs)
+
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
 
 	// Collect results in order
 	fetchResults := make([]fetchResult, total)
-	for range total {
-		result := <-resultsChan
+	for result := range resultsChan {
 		fetchResults[result.index] = result
 	}
-	close(resultsChan)
 
 	return fetchResults
 }

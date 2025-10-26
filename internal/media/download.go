@@ -27,12 +27,13 @@ func NewDownloadWorkerPool(
 	client *Client,
 	progress *mpb.Progress,
 	bars map[string]*mpb.Bar,
+	jobCount int,
 ) *DownloadWorkerPool {
 	return &DownloadWorkerPool{
 		ctx:      ctx,
 		client:   client,
-		jobs:     make(chan PreparedDownload, NumWorkers),
-		results:  make(chan DownloadResult, NumWorkers),
+		jobs:     make(chan PreparedDownload, jobCount),
+		results:  make(chan DownloadResult, jobCount),
 		progress: progress,
 		bars:     bars,
 	}
@@ -55,17 +56,8 @@ func (p *DownloadWorkerPool) worker() {
 	defer p.wg.Done()
 
 	for job := range p.jobs {
-		select {
-		case <-p.ctx.Done():
-			p.results <- DownloadResult{
-				VideoID: job.VideoID,
-				Error:   p.ctx.Err(),
-			}
-			return
-		default:
-			result := p.downloadJob(job)
-			p.results <- result
-		}
+		result := p.downloadJob(job)
+		p.results <- result
 	}
 }
 
@@ -90,7 +82,7 @@ func (c *Client) ExecuteConcurrentDownloads(
 	// Pre-create all progress bars in order
 	bars := createProgressBars(progress, prepared)
 
-	pool := NewDownloadWorkerPool(ctx, c, progress, bars)
+	pool := NewDownloadWorkerPool(ctx, c, progress, bars, len(prepared))
 	pool.start()
 
 	// Submit all jobs

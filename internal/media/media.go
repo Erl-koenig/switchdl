@@ -41,6 +41,11 @@ type PreparedDownload struct {
 	Total        int
 }
 
+type fetchJob struct {
+	index   int
+	videoID string
+}
+
 type fetchResult struct {
 	index   int
 	videoID string
