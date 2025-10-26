@@ -156,6 +156,63 @@ func promptForNewFilename(cfg *DownloadConfig) (string, error) {
 	}
 }
 
+func setupProgressBar(
+	progress *mpb.Progress,
+	preCreatedBar *mpb.Bar,
+	totalSize int64,
+	barName string,
+) *mpb.Bar {
+	if preCreatedBar != nil {
+		return updatePreCreatedBar(preCreatedBar, totalSize)
+	}
+	return createNewProgressBar(progress, totalSize, barName)
+}
+
+func updatePreCreatedBar(bar *mpb.Bar, totalSize int64) *mpb.Bar {
+	if totalSize > 0 {
+		bar.SetTotal(totalSize, false)
+	} else {
+		bar.SetTotal(1, false)
+	}
+	return bar
+}
+
+func createNewProgressBar(progress *mpb.Progress, totalSize int64, barName string) *mpb.Bar {
+	barStyle := mpb.BarStyle().
+		Lbound(barStyleLBound).
+		Filler(barStyleFiller).
+		Tip(barStyleTip).
+		Padding(barStylePadding).
+		Rbound(barStyleRBound)
+
+	if totalSize > 0 {
+		return progress.New(totalSize,
+			barStyle,
+			mpb.PrependDecorators(
+				decor.Name(barName, decor.WCSyncSpaceR),
+				decor.OnComplete(
+					decor.CountersKibiByte("% .2f / % .2f", decor.WCSyncWidth),
+					" done",
+				),
+			),
+			mpb.AppendDecorators(
+				decor.Percentage(),
+				decor.Name(decoratorSeparator),
+				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
+			),
+		)
+	}
+
+	return progress.New(0,
+		barStyle,
+		mpb.PrependDecorators(
+			decor.Name(barName, decor.WCSyncSpaceR),
+			decor.CountersKibiByte("% .2f"),
+		),
+		mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
+	)
+}
+
 func copyWithProgress(
 	ctx context.Context,
 	resp *http.Response,
@@ -177,51 +234,7 @@ func copyWithProgress(
 		localProgress = true
 	}
 
-	var bar *mpb.Bar
-	if preCreatedBar != nil {
-		// Use pre-created bar and update its total
-		bar = preCreatedBar
-		if totalSize > 0 {
-			bar.SetTotal(totalSize, false)
-		} else {
-			bar.SetTotal(1, false)
-		}
-	} else {
-		// Create bar for single downloads
-		barStyle := mpb.BarStyle().
-			Lbound(barStyleLBound).
-			Filler(barStyleFiller).
-			Tip(barStyleTip).
-			Padding(barStylePadding).
-			Rbound(barStyleRBound)
-
-		if totalSize > 0 {
-			bar = progress.New(totalSize,
-				barStyle,
-				mpb.PrependDecorators(
-					decor.Name(barName, decor.WCSyncSpaceR),
-					decor.OnComplete(
-						decor.CountersKibiByte("% .2f / % .2f", decor.WCSyncWidth),
-						" done",
-					),
-				),
-				mpb.AppendDecorators(
-					decor.Percentage(),
-					decor.Name(decoratorSeparator),
-					decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
-				),
-			)
-		} else {
-			bar = progress.New(0,
-				barStyle,
-				mpb.PrependDecorators(
-					decor.Name(barName, decor.WCSyncSpaceR),
-					decor.CountersKibiByte("% .2f"),
-				),
-				mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
-			)
-		}
-	}
+	bar := setupProgressBar(progress, preCreatedBar, totalSize, barName)
 
 	reader := bar.ProxyReader(resp.Body)
 	defer reader.Close()
