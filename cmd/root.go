@@ -21,7 +21,7 @@ var downloadCfg media.DownloadConfig
 var rootCmd = &cobra.Command{
 	Use:   "switchdl",
 	Short: "A CLI tool for downloading videos from SwitchTube",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		if cmd.Name() == "man" || cmd.Name() == "completion" || cmd.Name() == "version" {
 			return nil
 		}

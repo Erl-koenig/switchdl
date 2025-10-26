@@ -17,6 +17,55 @@ import (
 	"github.com/vbauerster/mpb/v8/decor"
 )
 
+const (
+	barStyleLBound     = "["
+	barStyleFiller     = "="
+	barStyleTip        = ">"
+	barStylePadding    = "-"
+	barStyleRBound     = "]"
+	decoratorSeparator = " | "
+	unknownSizeMessage = " (unknown size)"
+	progressBarWidth   = 64
+)
+
+// createProgressBars creates all progress bars in order before downloads start.
+// Bars are created with total=0 and will be updated via SetTotal when download begins.
+func createProgressBars(progress *mpb.Progress, prepared []PreparedDownload) map[string]*mpb.Bar {
+	bars := make(map[string]*mpb.Bar)
+
+	barStyle := mpb.BarStyle().
+		Lbound(barStyleLBound).
+		Filler(barStyleFiller).
+		Tip(barStyleTip).
+		Padding(barStylePadding).
+		Rbound(barStyleRBound)
+
+	for _, job := range prepared {
+		barName := fmt.Sprintf("[%d/%d] %s",
+			job.Index, job.Total, filepath.Base(job.OutputFile))
+
+		bar := progress.New(0,
+			barStyle,
+			mpb.PrependDecorators(
+				decor.Name(barName, decor.WCSyncSpaceR),
+				decor.OnComplete(
+					decor.CountersKibiByte("% .2f / % .2f", decor.WCSyncWidth),
+					" done",
+				),
+			),
+			mpb.AppendDecorators(
+				decor.Percentage(decor.WCSyncSpace),
+				decor.Name(decoratorSeparator),
+				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
+			),
+		)
+
+		bars[job.VideoID] = bar
+	}
+
+	return bars
+}
+
 func isInteractive() bool {
 	fi, err := os.Stdin.Stat()
 	return err == nil && (fi.Mode()&os.ModeCharDevice) != 0
@@ -107,32 +156,7 @@ func promptForNewFilename(cfg *DownloadConfig) (string, error) {
 	}
 }
 
-func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (err error) {
-	const (
-		barStyleLBound     = "["
-		barStyleFiller     = "="
-		barStyleTip        = ">"
-		barStylePadding    = "-"
-		barStyleRBound     = "]"
-		decoratorSeparator = " | "
-		downloadMessage    = "Downloading:"
-		doneMessage        = "done"
-		unknownSizeMessage = " (unknown size)"
-		progressBarWidth   = 64
-	)
-
-	contentLength := resp.Header.Get("Content-Length")
-	var totalSize int64
-	if contentLength != "" {
-		var parseErr error
-		totalSize, parseErr = strconv.ParseInt(contentLength, 10, 64)
-		if parseErr != nil {
-			// TODO: handle parseErr
-			totalSize = 0
-		}
-	}
-
-	p := mpb.NewWithContext(ctx, mpb.WithWidth(progressBarWidth))
+func createNewProgressBar(progress *mpb.Progress, totalSize int64, barName string) *mpb.Bar {
 	barStyle := mpb.BarStyle().
 		Lbound(barStyleLBound).
 		Filler(barStyleFiller).
@@ -140,13 +164,15 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 		Padding(barStylePadding).
 		Rbound(barStyleRBound)
 
-	var bar *mpb.Bar
 	if totalSize > 0 {
-		bar = p.New(totalSize,
+		return progress.New(totalSize,
 			barStyle,
 			mpb.PrependDecorators(
-				decor.Name(downloadMessage, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
-				decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), doneMessage),
+				decor.Name(barName, decor.WCSyncSpaceR),
+				decor.OnComplete(
+					decor.CountersKibiByte("% .2f / % .2f", decor.WCSyncWidth),
+					" done",
+				),
 			),
 			mpb.AppendDecorators(
 				decor.Percentage(),
@@ -154,31 +180,69 @@ func copyWithProgress(ctx context.Context, resp *http.Response, out *os.File) (e
 				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
 			),
 		)
+	}
+
+	return progress.New(0,
+		barStyle,
+		mpb.PrependDecorators(
+			decor.Name(barName, decor.WCSyncSpaceR),
+			decor.CountersKibiByte("% .2f"),
+		),
+		mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
+	)
+}
+
+func copyWithProgress(
+	ctx context.Context,
+	resp *http.Response,
+	out *os.File,
+	progress *mpb.Progress,
+	barName string,
+	preCreatedBar *mpb.Bar,
+) error {
+	contentLength := resp.Header.Get("Content-Length")
+	var totalSize int64
+	if contentLength != "" {
+		totalSize, _ = strconv.ParseInt(contentLength, 10, 64)
+	}
+
+	// keep old behavior for single downloads
+	localProgress := false
+	if progress == nil {
+		progress = mpb.NewWithContext(ctx, mpb.WithWidth(progressBarWidth))
+		localProgress = true
+	}
+
+	var bar *mpb.Bar
+	if preCreatedBar != nil {
+		// Update pre-created bar with actual total size
+		bar = preCreatedBar
+		if totalSize > 0 {
+			bar.SetTotal(totalSize, false)
+		} else {
+			bar.SetTotal(1, false)
+		}
 	} else {
-		bar = p.New(0,
-			barStyle,
-			mpb.PrependDecorators(
-				decor.Name(downloadMessage, decor.WC{C: decor.DindentRight | decor.DextraSpace}),
-				decor.CountersKibiByte("% .2f"),
-			),
-			mpb.AppendDecorators(decor.Name(unknownSizeMessage)),
-		)
+		// Create new bar for single downloads
+		bar = createNewProgressBar(progress, totalSize, barName)
 	}
 
 	reader := bar.ProxyReader(resp.Body)
-	defer func() {
-		if cerr := reader.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close reader: %w", cerr)
-		}
-	}()
+	defer reader.Close()
 
-	_, err = io.Copy(out, reader)
+	_, err := io.Copy(out, reader)
 	if err != nil {
 		return fmt.Errorf("failed to write video to file: %w", err)
 	}
 
-	p.Wait()
-	fmt.Printf("Video \"%s\" downloaded successfully \n", out.Name())
+	if preCreatedBar != nil {
+		bar.SetTotal(bar.Current(), true)
+	}
+
+	if localProgress {
+		progress.Wait()
+	}
+
 	return nil
 }
 
@@ -258,7 +322,7 @@ func displayVideosInTable(videos []*VideoDetails) error {
 	if _, err := fmt.Fprintln(writer, "Index \t Title \t Duration \t Date"); err != nil {
 		return fmt.Errorf("failed to write table header: %w", err)
 	}
-	if _, err := fmt.Fprintln(writer, strings.Repeat("─", indexWidth)+"\t"+strings.Repeat("─", titleWidth)+"\t"+strings.Repeat("─", durationWidth)+"\t"+strings.Repeat("─", durationWidth)); err != nil {
+	if _, err := fmt.Fprintln(writer, strings.Repeat("─", indexWidth)+"\t"+strings.Repeat("─", titleWidth)+"\t"+strings.Repeat("─", durationWidth)+"\t"+strings.Repeat("─", dateWidth)); err != nil {
 		return fmt.Errorf("failed to write table separator: %w", err)
 	}
 

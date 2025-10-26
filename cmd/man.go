@@ -9,7 +9,7 @@ var manCmd = &cobra.Command{
 	Use:    "man",
 	Short:  "Generate man pages for switchdl",
 	Hidden: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		return doc.GenManTree(rootCmd, &doc.GenManHeader{
 			Title:   "SWITCHDL",
 			Section: "1",
