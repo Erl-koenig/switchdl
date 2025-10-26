@@ -38,7 +38,6 @@ func NewDownloadWorkerPool(
 	}
 }
 
-// start launches the worker goroutines
 func (p *DownloadWorkerPool) start() {
 	for range NumWorkers {
 		p.wg.Add(1)
@@ -46,14 +45,12 @@ func (p *DownloadWorkerPool) start() {
 	}
 }
 
-// close signals that no more jobs will be submitted and waits for completion
 func (p *DownloadWorkerPool) close() {
 	close(p.jobs)
 	p.wg.Wait()
 	close(p.results)
 }
 
-// worker processes download jobs from the jobs channel
 func (p *DownloadWorkerPool) worker() {
 	defer p.wg.Done()
 
@@ -72,7 +69,6 @@ func (p *DownloadWorkerPool) worker() {
 	}
 }
 
-// downloadJob executes a single download job
 func (p *DownloadWorkerPool) downloadJob(job PreparedDownload) DownloadResult {
 	bar := p.bars[job.VideoID]
 	err := p.client.downloadPreparedVideo(p.ctx, job, p.progress, bar)
