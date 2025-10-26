@@ -156,27 +156,6 @@ func promptForNewFilename(cfg *DownloadConfig) (string, error) {
 	}
 }
 
-func setupProgressBar(
-	progress *mpb.Progress,
-	preCreatedBar *mpb.Bar,
-	totalSize int64,
-	barName string,
-) *mpb.Bar {
-	if preCreatedBar != nil {
-		return updatePreCreatedBar(preCreatedBar, totalSize)
-	}
-	return createNewProgressBar(progress, totalSize, barName)
-}
-
-func updatePreCreatedBar(bar *mpb.Bar, totalSize int64) *mpb.Bar {
-	if totalSize > 0 {
-		bar.SetTotal(totalSize, false)
-	} else {
-		bar.SetTotal(1, false)
-	}
-	return bar
-}
-
 func createNewProgressBar(progress *mpb.Progress, totalSize int64, barName string) *mpb.Bar {
 	barStyle := mpb.BarStyle().
 		Lbound(barStyleLBound).
@@ -234,7 +213,19 @@ func copyWithProgress(
 		localProgress = true
 	}
 
-	bar := setupProgressBar(progress, preCreatedBar, totalSize, barName)
+	var bar *mpb.Bar
+	if preCreatedBar != nil {
+		// Update pre-created bar with actual total size
+		bar = preCreatedBar
+		if totalSize > 0 {
+			bar.SetTotal(totalSize, false)
+		} else {
+			bar.SetTotal(1, false)
+		}
+	} else {
+		// Create new bar for single downloads
+		bar = createNewProgressBar(progress, totalSize, barName)
+	}
 
 	reader := bar.ProxyReader(resp.Body)
 	defer reader.Close()
