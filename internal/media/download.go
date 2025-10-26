@@ -3,51 +3,14 @@ package media
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"sync"
 
 	"github.com/vbauerster/mpb/v8"
-	"github.com/vbauerster/mpb/v8/decor"
 )
 
 const (
 	NumWorkers = 3 // NOTE: set to 3, as the API documentation recommends
 )
-
-// create all progress bars in order before downloads start
-// init with total=0 and update via SetTotal when download begins
-func (c *Client) createProgressBars(progress *mpb.Progress, prepared []PreparedDownload) map[string]*mpb.Bar {
-	bars := make(map[string]*mpb.Bar)
-
-	barStyle := mpb.BarStyle().
-		Lbound(barStyleLBound).
-		Filler(barStyleFiller).
-		Tip(barStyleTip).
-		Padding(barStylePadding).
-		Rbound(barStyleRBound)
-
-	for _, job := range prepared {
-		barName := fmt.Sprintf("[%d/%d] %s",
-			job.Index, job.Total, filepath.Base(job.OutputFile))
-
-		bar := progress.New(0,
-			barStyle,
-			mpb.PrependDecorators(
-				decor.Name(barName, decor.WCSyncSpaceR),
-				decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), " done"),
-			),
-			mpb.AppendDecorators(
-				decor.Percentage(decor.WCSyncSpace),
-				decor.Name(decoratorSeparator),
-				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
-			),
-		)
-
-		bars[job.VideoID] = bar
-	}
-
-	return bars
-}
 
 type DownloadWorkerPool struct {
 	ctx      context.Context
@@ -129,7 +92,7 @@ func (c *Client) ExecuteConcurrentDownloads(
 	progress := mpb.NewWithContext(ctx, mpb.WithWidth(progressBarWidth))
 
 	// Pre-create all progress bars in order
-	bars := c.createProgressBars(progress, prepared)
+	bars := createProgressBars(progress, prepared)
 
 	pool := NewDownloadWorkerPool(ctx, c, progress, bars)
 	pool.start()

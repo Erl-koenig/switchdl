@@ -29,6 +29,41 @@ const (
 	progressBarWidth   = 64
 )
 
+// createProgressBars creates all progress bars in order before downloads start.
+// Bars are created with total=0 and will be updated via SetTotal when download begins.
+func createProgressBars(progress *mpb.Progress, prepared []PreparedDownload) map[string]*mpb.Bar {
+	bars := make(map[string]*mpb.Bar)
+
+	barStyle := mpb.BarStyle().
+		Lbound(barStyleLBound).
+		Filler(barStyleFiller).
+		Tip(barStyleTip).
+		Padding(barStylePadding).
+		Rbound(barStyleRBound)
+
+	for _, job := range prepared {
+		barName := fmt.Sprintf("[%d/%d] %s",
+			job.Index, job.Total, filepath.Base(job.OutputFile))
+
+		bar := progress.New(0,
+			barStyle,
+			mpb.PrependDecorators(
+				decor.Name(barName, decor.WCSyncSpaceR),
+				decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), " done"),
+			),
+			mpb.AppendDecorators(
+				decor.Percentage(decor.WCSyncSpace),
+				decor.Name(decoratorSeparator),
+				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), ""),
+			),
+		)
+
+		bars[job.VideoID] = bar
+	}
+
+	return bars
+}
+
 func isInteractive() bool {
 	fi, err := os.Stdin.Stat()
 	return err == nil && (fi.Mode()&os.ModeCharDevice) != 0
