@@ -24,7 +24,6 @@ const (
 	barStylePadding    = "-"
 	barStyleRBound     = "]"
 	decoratorSeparator = " | "
-	doneMessage        = " done"
 	unknownSizeMessage = " (unknown size)"
 	progressBarWidth   = 64
 )
@@ -49,7 +48,10 @@ func createProgressBars(progress *mpb.Progress, prepared []PreparedDownload) map
 			barStyle,
 			mpb.PrependDecorators(
 				decor.Name(barName, decor.WCSyncSpaceR),
-				decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), " done"),
+				decor.OnComplete(
+					decor.CountersKibiByte("% .2f / % .2f", decor.WCSyncWidth),
+					" done",
+				),
 			),
 			mpb.AppendDecorators(
 				decor.Percentage(decor.WCSyncSpace),
@@ -198,7 +200,10 @@ func copyWithProgress(
 				barStyle,
 				mpb.PrependDecorators(
 					decor.Name(barName, decor.WCSyncSpaceR),
-					decor.OnComplete(decor.CountersKibiByte("% .2f / % .2f"), " done"),
+					decor.OnComplete(
+						decor.CountersKibiByte("% .2f / % .2f", decor.WCSyncWidth),
+						" done",
+					),
 				),
 				mpb.AppendDecorators(
 					decor.Percentage(),
